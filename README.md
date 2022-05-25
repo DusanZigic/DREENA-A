@@ -1,4 +1,6 @@
-# DREENA-A
+===========================================
+DREENA-A
+===========================================
 
 DREENA-A is computational framework for generating high-pT predictions based on a dynamical energy loss formalism. The framework can include 
 any, in principle arbitrary, temperature profile within the dynamical energy loss formalism.
@@ -149,7 +151,7 @@ BCFY and KLP have to be used.
 
 This version of DREENA-A framework is tuned to LHC energies.
 
-Calculation time for LTables calculation is large (several hours on 112 cores). However, they need to be calculated only once. Energy loss calculation
+Calculation time for LTables calculation is large (up to about one hour on 112 cores). However, they need to be calculated only once. Energy loss calculation
 time is mainly dependent on the number of sampled jet's trajectory and for default values of parameters (xGridN=40, yGrid=40, phiGridN=50) whose values
 have shown to be sufficient for multiple different temperature evolutions and binary collision densities, and it is about several minutes on 4 cores,
 which means it can easily be run locally.
