@@ -35,6 +35,7 @@ a) initial pT distributions
                be dsigma/d(pT^2), so these distributions need to be modified;
                to avoid modifying different parameters that are hard-coded, initial pT distribution for heavy flavour should be in the range of 1GeV
                to at least 200GeV and for light flavour from 1GeV to at least 450GeV;
+               for most distributions pT step of 1GeV seems to be sufficient;
 
 b) temperature evolution
 
@@ -100,9 +101,9 @@ b) energy loss calculation
    -xGriN, yGridN: number of x and y points on the equidistant grid in transverse plane that will be used as initial position points for jets (default values:
                    -xGridN=40 -yGridN=40);
    -phiGridN:      number of sampled angles between jet's trajectory and the x-axis in the transverse plane (default value: -phiGridN=50)
-   -pTinit_path:   absolute path or path relative to executiable of initial pT distribution; if omitted, the default path is used: ./pTinitDists/pTinitDist_[particle_name].dat
-   -temp_path:     absolute path or path relative to executiable of temperature evolution file; if omitted, the default path is used: ./TProfiles/TProfile_cent=[centrality].dat
-   -bcd_path:      absolute path or path relative to executiable of binary collision density file; if omitted, the default path is used: ./BinaryCollDensities/BinaryCollDensity_cent=[centrality].dat
+   -pTinit_path:   absolute path or path relative to executable of initial pT distribution; if omitted, the default path is used: ./pTinitDists/pTinitDist_[particle_name].dat
+   -temp_path:     absolute path or path relative to executable of temperature evolution file; if omitted, the default path is used: ./TProfiles/TProfile_cent=[centrality].dat
+   -bcd_path:      absolute path or path relative to executable of binary collision density file; if omitted, the default path is used: ./BinaryCollDensities/BinaryCollDensity_cent=[centrality].dat
    -TIMESTEP:      timestep along jet's trajectory (default value: 0.1; unit: fm)
    -TCRIT:         critical temperature (default value: 0.155; unit: GeV)
 
@@ -152,7 +153,7 @@ BCFY and KLP have to be used.
 This version of DREENA-A framework is tuned to LHC energies.
 
 Calculation time for LTables calculation is large (up to about one hour on 112 cores). However, they need to be calculated only once. Energy loss calculation
-time is mainly dependent on the number of sampled jet's trajectory and for default values of parameters (xGridN=40, yGrid=40, phiGridN=50) whose values
+time is mainly dependent on the number of sampled jet's trajectory and for default values of parameters (xGridN=40, yGridN=40, phiGridN=50) whose values
 have shown to be sufficient for multiple different temperature evolutions and binary collision densities, and it is about several minutes on 4 cores,
 which means it can easily be run locally.
 
