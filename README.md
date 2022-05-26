@@ -30,7 +30,7 @@ a) initial pT distributions
    
    initial pT distributions file should have 2 columns in format: pT | dsigma/d(pT^2);  
 
-   for heavy flavor, initial pT distributions can be obtained from http://www.lpthe.jussieu.fr/~cacciari/fonll/fonllform.html;
+   for heavy flavor, initial pT distributions can be obtained from http://www.lpthe.jussieu.fr/~cacciari/fonll/fonllform.html
    *IMPORTANT* note that the default output of this web interface is dsigma/dpT, while DREENA-A initial pT distribution input needs to
                be dsigma/d(pT^2), so these distributions need to be modified;
                to avoid modifying different parameters that are hard-coded, initial pT distribution for heavy flavour should be in the range of 1GeV
