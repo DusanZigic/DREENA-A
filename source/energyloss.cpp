@@ -117,6 +117,16 @@ void energyLoss::runEnergyLoss()
 
     if (loadTempEvol()          != 1) return;
     if (generateInitPosPoints() != 1) return;
+
+	if ((m_pName == "Bottom") || (m_pName == "Charm")) {
+		runELossHeavyFlavour();
+	}
+	else if (m_pName == "LQuarks") {
+		runELossLightQuarks();
+	}
+	else {
+		runELossLightFlavour();
+	}
 }
 
 double energyLoss::productLog(double x) const
@@ -147,6 +157,7 @@ double energyLoss::productLog(double x) const
 	}
 	return w1;
 }
+
 
 int energyLoss::loaddsdpti2()
 {
@@ -765,4 +776,783 @@ int energyLoss::generateInitPosPoints()
 	}
 
 	return 1;
+}
+
+
+void energyLoss::radCollEnergyLoss(double x, double y, double phi, std::vector<double> &radRAA1, std::vector<std::vector<double>> &radRAA2, std::vector<double> &collEL, double &pathLength, double &temperature) const
+//function that calculates radiative and collisional EL for particles created in (X0, Y0) with direction phi0 (modefied pT integration algorithm)
+//x, y, phi     - inital position and angle 					  		     <- input
+//radiativeRAA1 - radiative RAA for single trajectory (dA410)	  		     <- output
+//radiativeRAA2 - radiative RAA for single trajectory (rest of dA integrals) <- output
+//collisionalEL - collisional energy loss for single trajectory   		     <- output
+//pathLength    - path-length for single trajectory							 <- output
+//temperature   - temperature for single trajectory							 <- output
+{
+	std::vector<double> currLTTabL, currLTTabT; //defining arrays that will store current path-lengths and temperatures
+
+	double t = m_tau0, currTemp; // defining current path-length (time) and temperature
+
+	while ((currTemp = m_tempEvol.interpolation(t, x + t*std::cos(phi), y + t*std::sin(phi))) > m_TCRIT) {// calculating current path-length and temp table
+		currLTTabL.push_back(t);
+		currLTTabT.push_back(currTemp);
+		t += m_TIMESTEP;
+	}
+	
+	if (currLTTabL.size() > 1) {// calculating energy loss if path-length is longer than thermalization time
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////
+		//Radiative EnergyLoss calculation:
+
+		std::vector<double> currNormTabTau(currLTTabL.size()), currNormTabVal(currLTTabL.size()); // LNorm table to be integrated over tau
+		std::vector<double> NormSparseP, NormSparseV;											  // table for currNormInterp
+		
+		std::vector<double> currDndxTabTau(currLTTabL.size()), currDndxTabVal(currLTTabL.size()); // Ldndx table to be integrated over tau
+		std::vector<double> dndxSparseP, dndxSparseX, dndxSparseV;			  				 	  // table for currDndxInterp
+
+		for (const auto &p : m_Grids.pPts()) //loop over ppts
+		{
+			for (size_t l=0; l<currLTTabL.size(); l++) {// loop over current path-length and temperature table
+				currNormTabTau[l] = currLTTabL[l];											//setting path-lengths
+				currNormTabVal[l] = m_LNorm.interpolation(currLTTabL[l], p, currLTTabT[l]); //setting current norm values by integrating over time
+			}
+
+			NormSparseP.push_back(p);													  //setting p of current norm table
+			NormSparseV.push_back(poly::linearIntegrate(currNormTabTau, currNormTabVal)); //setting value of current norm table
+
+			for (const auto &x : m_Grids.xPts()) {// loop over xpts
+				for (int l=0; l<currLTTabL.size(); l++) {// loop over current path-length and temperature table
+					currDndxTabTau[l] = currLTTabL[l];											   //setting path-lengths
+					currDndxTabVal[l] = m_Ldndx.interpolation(currLTTabL[l], p, currLTTabT[l], x); //setting Ldndx values
+				}
+
+				dndxSparseP.push_back(p);													  //setting p of current dndx table
+				dndxSparseX.push_back(x);													  //setting x of current dndx table
+				dndxSparseV.push_back(poly::linearIntegrate(currDndxTabTau, currDndxTabVal)); //setting curernt dndx values by integrating over time
+			}
+		}
+		
+		interpolationF<double> currNorm(NormSparseP, NormSparseV);				//constructing interpolated current norm
+		interpolationF<double> currDndx(dndxSparseP, dndxSparseX, dndxSparseV); //constructing interpolated current dndx
+		
+
+		for (const auto &ph : m_Grids.RadPts()) {// loop over Radpts
+			radRAA1.push_back(dAp410(ph, currNorm));
+
+			radRAA2.push_back(std::vector<double>());
+			for (const auto &Fdp : m_Grids.FdpPts())
+				radRAA2.back().push_back(FdA(ph, Fdp, currNorm, currDndx));
+
+		}
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////
+		//Collisional EnergyLoss calculation:
+
+		std::vector<double> currCollTabTau(currLTTabL.size()), currCollTabVal(currLTTabL.size()); //collisional table to be integrated over tau
+
+		for (const auto &p : m_Grids.pCollPts()) {// loop over pCollPts
+			for (size_t l=0; l<currLTTabL.size(); l++) {// loop over current path-length and temperature table
+				currCollTabTau[l] = currLTTabL[l];							 //setting path-lengths
+				currCollTabVal[l] = m_LColl.interpolation(p, currLTTabT[l]); //setting LColl values
+			}
+
+			collEL.push_back(poly::linearIntegrate(currCollTabTau, currCollTabVal)); //calculating collisional energy loss by integrating over time
+		}
+		
+		pathLength = currLTTabL.back(); //setting value of path-length for single trajectory
+
+		//calculating mean temperature along path
+		temperature = 0.0;
+		for (size_t l=0; l<currLTTabL.size(); l++) temperature += currLTTabT[l];
+		temperature /= static_cast<double>(currLTTabL.size());
+	}
+	else { //if path-length is smaller than thermalization time:
+
+		pathLength  = 0.0; //setting path-length and temperature
+		temperature = 0.0;
+	}
+}
+
+void energyLoss::radCollEnergyLoss(double x, double y, double phi, std::vector<double> &radRAA, std::vector<double> &collEL, double &pathLenght, double &temperature) const
+//function that calculates radiative and collisional EL for particles created in (X0, Y0) with direction phi0 (standard algorithm)
+//x, y, phi   - inital position and angle 					  <- input
+//radRAA      - radiative RAA for single trajectory 		  <- output
+//collEL      - collisional energy loss for single trajectory <- output
+//pathLenght  - path-length for single trajectory			  <- output
+//temperature - temperature for single trajectory 			  <- output
+{
+	std::vector<double> currLTTabL, currLTTabT; //defining arrays that will store current path-lengths and temperatures
+
+	double t = m_tau0, currTemp; //defining current path-length (time) and temperature
+
+	while ((currTemp = m_tempEvol.interpolation(t, x + t*std::cos(phi), y + t*std::sin(phi))) > m_TCRIT) { //calculating current path-length and temp table
+		currLTTabL.push_back(t);
+		currLTTabT.push_back(currTemp);
+		t += m_TIMESTEP;
+	}
+	
+	if (currLTTabL.size() > 1) { //calculating energy loss if path-length is longer than thermalization time
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////
+		//Radiative EnergyLoss calculation:
+
+		std::vector<double> currNormTabTau(currLTTabL.size()), currNormTabVal(currLTTabL.size()); //LNorm table to be integrated over tau
+		std::vector<double> NormSparseP, NormSparseV;											  //table for currNormInterp
+		
+		std::vector<double> currDndxTabTau(currLTTabL.size()), currDndxTabVal(currLTTabL.size()); //Ldndx table to be integrated over tau
+		std::vector<double> dndxSparseP, dndxSparseX, dndxSparseV;			  				 	  //table for currDndxInterp
+
+		for (const auto &p : m_Grids.pPts()) //loop over ppts
+		{
+			for (size_t iL=0; iL<currLTTabL.size(); iL++) //loop over current path-length and temperature table
+			{
+				currNormTabTau[iL] = currLTTabL[iL];										   //setting path-lengths
+				currNormTabVal[iL] = m_LNorm.interpolation(currLTTabL[iL], p, currLTTabT[iL]); //setting current norm values by integrating over time
+			}
+
+			NormSparseP.push_back(p);													  //setting p of current norm table
+			NormSparseV.push_back(poly::linearIntegrate(currNormTabTau, currNormTabVal)); //setting value of current norm table
+
+			for (const auto &x : m_Grids.xPts()) //loop over xpts
+			{
+				for (size_t iL=0; iL<currLTTabL.size(); iL++) //loop over current path-length and temperature table
+				{
+					currDndxTabTau[iL] = currLTTabL[iL]; 									          //setting path-lengths
+					currDndxTabVal[iL] = m_Ldndx.interpolation(currLTTabL[iL], p, currLTTabT[iL], x); //setting Ldndx values
+				}
+
+				dndxSparseP.push_back(p); 													  //setting p of current dndx table
+				dndxSparseX.push_back(x);													  //setting x of current dndx table
+				dndxSparseV.push_back(poly::linearIntegrate(currDndxTabTau, currDndxTabVal)); //setting curernt dndx values by integrating over time
+			}
+		}
+		
+		interpolationF<double> currNorm(NormSparseP, NormSparseV); 			    //constructing interpolated current norm
+		interpolationF<double> currDndx(dndxSparseP, dndxSparseX, dndxSparseV); //constructing interpolated current dndx
+		
+		for (const auto &p : m_Grids.RadPts())
+			radRAA.push_back(dA41(p, currNorm, currDndx)/m_dsdpti2.interpolation(p)); //calculating radiative RAA
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////
+		//Collisional EnergyLoss calculation:
+
+		std::vector<double> currCollTabTau(currLTTabL.size()), currCollTabVal(currLTTabL.size()); //collisional table to be integrated over tau
+
+		for (const auto &p : m_Grids.pCollPts()) //loop over pCollPts
+		{
+			for (size_t iL=0; iL<currLTTabL.size(); iL++) //loop over current path-length and temperature table
+			{
+				currCollTabTau[iL] = currLTTabL[iL]; 				            //setting path-lengths
+				currCollTabVal[iL] = m_LColl.interpolation(p, currLTTabT[iL]); //setting LColl values
+			}
+
+			collEL.push_back(poly::linearIntegrate(currCollTabTau, currCollTabVal)); //calculating collisional energy loss by integrating over time
+		}
+		
+		pathLenght = currLTTabL.back(); //setting value of path-length for single trajectory
+
+		//calculating mean temperature along path
+		temperature = 0.0;
+		for (size_t iL=0; iL<currLTTabL.size(); iL++) temperature += currLTTabT[iL];
+		temperature /= static_cast<double>(currLTTabL.size());
+	}
+	else { //if path-length is smaller than thermalization time:
+
+		pathLenght   = 0.0; //setting path-length and temperature
+		temperature  = 0.0;
+	}
+}
+
+
+void energyLoss::generateGaussTab(std::vector<double> &qGTab, std::vector<double> &fGTab) const
+//function that generates sampling points for Gaussian integration
+//qGTab, fGTab - vectors that store sampling point <- output
+{	
+	double sigmaNum = 3.5; //setting sigma
+	double sigmaStep = 0.25; //setting step
+	size_t GTabLen = 2 * static_cast<size_t>(sigmaNum / sigmaStep) + 1; //setting length of sampling points
+	
+	double GaussTabSum = 0.0; //setting normalization sum to zero
+	
+	for (size_t iG=0; iG<GTabLen; iG++) //calculating sampling points
+	{
+		qGTab.push_back(-1.0*sigmaNum + static_cast<double>(iG)*sigmaStep); //setting qGaussTab values
+		fGTab.push_back(std::exp(-qGTab.back()*qGTab.back()/2.0));          //setting fGaussTab values
+		GaussTabSum += fGTab.back();                                        //adding to normalization sum
+	}
+	
+	for (size_t iG=0; iG<GTabLen; iG++)  //normalizing
+	{
+		fGTab[iG] /= GaussTabSum; //dividing fGaussTab values with total sum
+	}
+}
+
+void energyLoss::gaussFilterIntegrate(const std::vector<double> &radiativeRAA1, const std::vector<std::vector<double>> &radiativeRAA2, const std::vector<double> &collisionalEL, std::vector<double> &singRAA1, std::vector<std::vector<double>> &singRAA2) const
+//function that performs Gauss filter integration - modefied pT integration algorithm
+//radiativeRAA1 - raditive RAA (dA410)											  <- input
+//radiativeRAA2 - raditive RAA (rest of dA integrals)							  <- input
+//collisionalEL - collisional energy loss										  <- input
+//singRAA1 		- RAA array after Gauss filter integration (dA410)				  <- output
+//singRAA2 		- RAA array after Gauss filter integration (rest of dA integrals) <- output
+{
+    interpolationF<double> muCollInt(m_Grids.pCollPts(), collisionalEL); //creating collisional energy loss interpolated function
+
+	std::vector<double> qGaussTabOG, fGaussTabOG; //defining vectors that will store original Gauss filter sampling points
+	generateGaussTab(qGaussTabOG, fGaussTabOG);   //generating sampling points and settin number of sampling poins
+
+	std::vector<double> qGaussTab, fGaussTab; //defining vectors that will store Gauss filter sampling points
+
+	//////////////////////////////////////////////////////////////////////////////////
+	//Gauss integration of dAp410:
+	{
+        interpolationF<double> RadRelInt(m_Grids.RadPts(), radiativeRAA1); //creating radiative RAA1 interpolated function
+
+		double GFSum; //defining sum variable for Gauss filter
+		double dppT;  //defining integration variable
+
+		double muCollCurrVal; //defining variable that stores value of interpolated muColl for specific pT, ie current value
+		double sigmaColl;     //defining variable for collisional sigma
+
+		for (const auto &pT : m_Grids.finPts())
+		{
+			GFSum = 0.0;
+
+			muCollCurrVal = muCollInt.interpolation(pT);
+
+			sigmaColl = std::sqrt(2.0*m_TCollConst*muCollCurrVal);
+
+			qGaussTab = qGaussTabOG; fGaussTab = fGaussTabOG; //setting Gauss filter
+
+			if ((muCollCurrVal + sigmaColl * qGaussTab.front()) < -3.0) { 						        //checking if Gauss is out of bound on lower bound
+				double resfac = ((-3.0 + 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.front(); 	        //setting rescaling factor
+				std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+			}			
+		
+			if ((muCollCurrVal + sigmaColl * qGaussTab.back()) > 20.0) {						        //checking if Gauss is out of bound on upper bound
+				double resfac = ((20.0 - 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.back();	        //setting rescaling factor
+				std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+			}
+
+			//calculating Gauss filter
+			for (size_t iG=0; iG<qGaussTab.size(); iG++)
+			{
+				dppT = muCollCurrVal + sigmaColl * qGaussTab[iG];			
+				GFSum += (m_dsdpti2.interpolation(pT + dppT)*RadRelInt.interpolation(pT + dppT)*(pT + dppT) / pT * fGaussTab[iG]);
+			}
+
+			singRAA1.push_back(1.0 / m_dsdpti2.interpolation(pT) * GFSum);
+		}
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////
+	//Gauss integration of FdA:
+	{
+		interpolationF<double> RadRelInt(m_Grids.RadPts(), m_Grids.FdpPts(), radiativeRAA2);
+
+		double GFSum; //defining sum variable for Gauss filter
+		double dppT;  //defining integration variable
+
+		double muCollCurrVal; //defining variable that stores value of interpolated muColl for specific pT, ie current value
+		double sigmaColl;     //defining variable for collisional sigma
+
+		for (const auto &pT : m_Grids.finPts())
+		{
+			singRAA2.push_back(std::vector<double>()); //resizing single RAA vector
+
+			muCollCurrVal = muCollInt.interpolation(pT);
+
+			sigmaColl = std::sqrt(2.0*m_TCollConst*muCollCurrVal);
+
+			qGaussTab = qGaussTabOG; fGaussTab = fGaussTabOG; //setting Gauss filter
+
+			if ((muCollCurrVal + sigmaColl * qGaussTab.front()) < -3.0) { 						        //checking if Gauss is out of bound on lower bound
+				double resfac = ((-3.0 + 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.front(); 	        //setting rescaling factor
+				std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+			}			
+		
+			if ((muCollCurrVal + sigmaColl * qGaussTab.back()) > 20.0) {						        //checking if Gauss is out of bound on upper bound
+				double resfac = ((20.0 - 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.back();            //setting rescaling factor
+				std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+			}
+
+			for (const auto &dpT : m_Grids.FdpPts()) //loop over FdpPts
+			{
+				GFSum = 0.0; //setting sum to 0
+
+				//calculating Gauss filter
+				for (size_t iG=0; iG<qGaussTab.size(); iG++)
+				{
+					dppT = muCollCurrVal + sigmaColl * qGaussTab[iG];
+					GFSum += (m_dsdpti2.interpolation(pT + dpT + dppT)*RadRelInt.interpolation(pT + dppT, dpT)*(pT + dppT)/(pT+ dpT + dppT)*fGaussTab[iG]);
+				}
+
+				singRAA2.back().push_back(1.0 / m_dsdpti2.interpolation(pT) * GFSum);
+			}
+		}
+	}
+}
+
+void energyLoss::gaussFilterIntegrate(const interpolationF<double> &dsdpti2lquark, const std::vector<double> &radiativeRAA1, const std::vector<std::vector<double>> &radiativeRAA2, const std::vector<double> &collisionalEL, std::vector<double> &singRAA1, std::vector<std::vector<double>> &singRAA2) const
+//function that performs Gauss filter integration - modefied pT integration algorithm used in all lquarks algorithm
+//dsdpti2lquark - light quark initial pT distribution      						  <- input
+//radiativeRAA1 - raditive RAA (dA410)											  <- input
+//radiativeRAA2 - raditive RAA (rest of dA integrals)							  <- input
+//collisionalEL - collisional energy loss										  <- input
+//singRAA1 		- RAA array after Gauss filter integration (dA410)				  <- output
+//singRAA2 		- RAA array after Gauss filter integration (rest of dA integrals) <- output
+{
+    interpolationF<double> muCollInt(m_Grids.pCollPts(), collisionalEL); //creating collisional energy loss interpolated function
+
+	std::vector<double> qGaussTabOG, fGaussTabOG; //defining vectors that will store original Gauss filter sampling points
+	generateGaussTab(qGaussTabOG, fGaussTabOG);   //generating sampling points and settin number of sampling poins
+
+	std::vector<double> qGaussTab, fGaussTab; //defining vectors that will store Gauss filter sampling points
+
+	//////////////////////////////////////////////////////////////////////////////////
+	//Gauss integration of dAp410:
+	{
+        interpolationF<double> RadRelInt(m_Grids.RadPts(), radiativeRAA1); //creating radiative RAA1 interpolated function
+
+		double GFSum; //defining sum variable for Gauss filter
+		double dppT;  //defining integration variable
+
+		double muCollCurrVal; //defining variable that stores value of interpolated muColl for specific pT, ie current value
+		double sigmaColl;     //defining variable for collisional sigma
+
+		for (const auto &pT : m_Grids.finPts())
+		{
+			GFSum = 0.0;
+
+			muCollCurrVal = muCollInt.interpolation(pT);
+
+			sigmaColl = std::sqrt(2.0*m_TCollConst*muCollCurrVal);
+
+			qGaussTab = qGaussTabOG; fGaussTab = fGaussTabOG; //setting Gauss filter
+
+			if ((muCollCurrVal + sigmaColl * qGaussTab.front()) < -3.0) { 						        //checking if Gauss is out of bound on lower bound
+				double resfac = ((-3.0 + 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.front(); 	        //setting rescaling factor
+				std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+			}			
+		
+			if ((muCollCurrVal + sigmaColl * qGaussTab.back()) > 20.0) {						        //checking if Gauss is out of bound on upper bound
+				double resfac = ((20.0 - 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.back();	        //setting rescaling factor
+				std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+			}
+
+			//calculating Gauss filter
+			for (size_t iG=0; iG<qGaussTab.size(); iG++)
+			{
+				dppT = muCollCurrVal + sigmaColl * qGaussTab[iG];			
+				GFSum += (dsdpti2lquark.interpolation(pT + dppT)*RadRelInt.interpolation(pT + dppT)*(pT + dppT) / pT * fGaussTab[iG]);
+			}
+
+			singRAA1.push_back(1.0 / dsdpti2lquark.interpolation(pT) * GFSum);
+		}
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////
+	//Gauss integration of FdA:
+	{
+		interpolationF<double> RadRelInt(m_Grids.RadPts(), m_Grids.FdpPts(), radiativeRAA2);
+
+		double GFSum; //defining sum variable for Gauss filter
+		double dppT;  //defining integration variable
+
+		double muCollCurrVal; //defining variable that stores value of interpolated muColl for specific pT, ie current value
+		double sigmaColl;     //defining variable for collisional sigma
+
+		for (const auto &pT : m_Grids.finPts())
+		{
+			singRAA2.push_back(std::vector<double>()); //resizing single RAA vector
+
+			muCollCurrVal = muCollInt.interpolation(pT);
+
+			sigmaColl = std::sqrt(2.0*m_TCollConst*muCollCurrVal);
+
+			qGaussTab = qGaussTabOG; fGaussTab = fGaussTabOG; //setting Gauss filter
+
+			if ((muCollCurrVal + sigmaColl * qGaussTab.front()) < -3.0) { 						        //checking if Gauss is out of bound on lower bound
+				double resfac = ((-3.0 + 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.front(); 	        //setting rescaling factor
+				std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+			}			
+		
+			if ((muCollCurrVal + sigmaColl * qGaussTab.back()) > 20.0) {						        //checking if Gauss is out of bound on upper bound
+				double resfac = ((20.0 - 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.back();	        //setting rescaling factor
+				std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+			}
+
+			for (const auto &dpT : m_Grids.FdpPts()) //loop over FdpPts
+			{
+				GFSum = 0.0; //setting sum to 0
+
+				//calculating Gauss filter
+				for (size_t iG=0; iG<qGaussTab.size(); iG++)
+				{
+					dppT = muCollCurrVal + sigmaColl * qGaussTab[iG];
+					GFSum += (dsdpti2lquark.interpolation(pT + dpT + dppT)*RadRelInt.interpolation(pT + dppT, dpT)*(pT + dppT)/(pT+ dpT + dppT)*fGaussTab[iG]);
+				}
+
+				singRAA2.back().push_back(1.0 / dsdpti2lquark.interpolation(pT) * GFSum);
+			}
+		}
+	}
+}
+
+void energyLoss::gaussFilterIntegrate(const std::vector<double> &radiativeRAA, const std::vector<double> &collisionalEL, std::vector<double> &singRAA) const
+//function that performs Gauss filter integration - default algorithm
+//radiativeRAA  - raditive RAA 							   <- input
+//collisionalEL - collisional energy loss				   <- input
+//singRAA 		- RAA array after Gauss filter integration <- output
+{
+    interpolationF<double> RadRelInt(m_Grids.RadPts(),   radiativeRAA);  //creating radiative RAA interpolated function
+    interpolationF<double> muCollInt(m_Grids.pCollPts(), collisionalEL); //creating collisional energy loss interpolated function
+
+	std::vector<double> qGaussTabOG, fGaussTabOG; //defining vectors that will store original Gauss filter sampling points
+	generateGaussTab(qGaussTabOG, fGaussTabOG);   //generating sampling points and settin number of sampling poins
+
+	std::vector<double> qGaussTab, fGaussTab; //defining vectors that will store Gauss filter sampling points
+
+	double GFSum; //defining sum variable for Gauss filter
+
+	double dpT; //defining pT and dpT variables
+
+	double muCollCurrVal; //defining variable that stores value of interpolated muColl for specific pT, ie current value
+
+	double sigmaColl; //defining variable for collisional sigma
+	
+	//Gauss filter
+	for (const auto &pT : m_Grids.finPts())
+	{
+		GFSum = 0.0L;
+
+		muCollCurrVal = muCollInt.interpolation(pT);
+
+		sigmaColl = std::sqrt(2.0*m_TCollConst*muCollCurrVal);
+
+		qGaussTab = qGaussTabOG; fGaussTab = fGaussTabOG; //setting Gauss filter
+
+		if ((muCollCurrVal + sigmaColl * qGaussTab.front()) < -3.0) { 						        //checking if Gauss is out of bound on lower bound
+			double resfac = ((-3.0 + 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.front(); 	        //setting rescaling factor
+			std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+		}		
+		
+		if ((muCollCurrVal + sigmaColl * qGaussTab.back()) > 20.0) {						        //checking if Gauss is out of bound on upper bound
+			double resfac = ((20.0 - 1e-12) - muCollCurrVal)/sigmaColl/qGaussTab.back();	        //setting rescaling factor
+			std::for_each(qGaussTab.begin(), qGaussTab.end(), [resfac](double &c){ c *= resfac; }); //rescaling sampling points if they are out of bounds
+		}
+		
+		//calculating Gauss filter
+		for (size_t iG=0; iG<qGaussTab.size(); iG++)
+		{
+			dpT = muCollCurrVal + sigmaColl * qGaussTab[iG];			
+			GFSum += (m_dsdpti2.interpolation(pT + dpT)*RadRelInt.interpolation(pT + dpT)*(pT + dpT) / pT * fGaussTab[iG]);
+		}
+
+		singRAA.push_back(1.0 / m_dsdpti2.interpolation(pT) * GFSum);
+	}
+}
+
+
+void energyLoss::calculateAvgPathlenTemps(const std::vector<double> &pathLenghDist, const std::vector<double> &temperatureDist, std::vector<double> &avgPathLength, std::vector<double> &avgTemp) const
+{
+	interpolationF<double> pathLenghDistInt(m_phiGridPts, pathLenghDist);
+	avgPathLength.push_back(poly::cubicIntegrate(m_phiGridPts, pathLenghDist)/2.0/M_PI);
+	avgPathLength.push_back((pathLenghDistInt.interpolation(m_phiGridPts.front()) + pathLenghDistInt.interpolation(m_phiGridPts.back()))/2.0);
+	avgPathLength.push_back((pathLenghDistInt.interpolation(M_PI/2.0)             + pathLenghDistInt.interpolation(3.0*M_PI/2.0))       /2.0);
+
+	interpolationF<double> temperatureDistInt(m_phiGridPts, temperatureDist);
+	avgTemp.push_back(poly::cubicIntegrate(m_phiGridPts, temperatureDist)/2.0/M_PI);
+	avgTemp.push_back((temperatureDistInt.interpolation(m_phiGridPts.front()) + temperatureDistInt.interpolation(m_phiGridPts.back()))/2.0);
+	avgTemp.push_back((temperatureDistInt.interpolation(M_PI/2.0)             + temperatureDistInt.interpolation(3.0*M_PI/2.0))       /2.0);
+}
+
+int energyLoss::exportResults(const std::string &pName, const std::vector<std::vector<double>> &RAADist, const std::vector<double> avgPathLength, const std::vector<double> avgTemp)
+{
+	std::vector<std::string> header;
+	header.push_back("#collision_system: " + m_collsys);
+	header.push_back("#collision_energy: " + m_sNN);
+	header.push_back("#particle_type: " + pName);
+	header.push_back("#centrality: " + m_centrality);
+
+	std::stringstream xbSStr; xbSStr << std::fixed << std::setprecision(1) << m_xB;
+	header.push_back("#xB = " + xbSStr.str());
+
+	std::stringstream avgPathLengthSStr[3];
+    for (size_t i=0; i<3; i++) avgPathLengthSStr[i] << std::fixed << std::setprecision(6) << avgPathLength[i];
+	header.push_back("#average_path-lengths: " + avgPathLengthSStr[0].str() + ", " + avgPathLengthSStr[1].str() + ", " + avgPathLengthSStr[2].str());
+
+	std::stringstream avgTempSStr[3];
+    for (size_t i=0; i<3; i++) avgTempSStr[i] << std::fixed << std::setprecision(6) << avgTemp[i];
+	header.push_back("#average_temperatures: " + avgTempSStr[0].str() + ", " + avgTempSStr[1].str() + ", " + avgTempSStr[2].str());
+	
+	if (m_yGridN <= 0) {
+		header.push_back("#number_of_angles:    " + std::to_string(m_phiGridN));
+		header.push_back("#number_of_xy_points: " + std::to_string(m_xGridN));
+	}
+	else {
+		header.push_back("#number_of_angles:      " + std::to_string(m_phiGridN));
+		header.push_back("#number_of_grid_points: " + std::to_string(m_xGridN) + ", " + std::to_string(m_yGridN));
+	}
+
+	header.push_back("#-------------------------------------------------------");
+	header.push_back("#   pT [GeV]       phi          R_AA   ");
+
+	const std::string path_out = "./results/results" + pName + "/" + pName + "_" + m_collsys + "_sNN=" + m_sNN + "_cent=" + m_centrality + "_xB=" + xbSStr.str() + "_dist.dat";
+
+	std::ofstream file_out(path_out, std::ios_base::out);
+	if (!file_out.is_open()) {
+		std::cerr << "Error: unable to open RAA(pT,phi) distribution file. Aborting..." << std::endl;
+		return -1;
+	}
+
+	for (const auto &h : header) file_out << h << "\n";
+
+	for (size_t ipT= 0; ipT<m_Grids.finPtsLength(); ipT++)
+		for (size_t iPhi=0; iPhi<m_phiGridN; iPhi++) {
+			file_out << std::fixed << std::setw(14) << std::setprecision(10) <<   m_Grids.finPts(ipT) << " ";
+			file_out << std::fixed << std::setw(12) << std::setprecision(10) <<    m_phiGridPts[iPhi] << " ";
+			file_out << std::fixed << std::setw(12) << std::setprecision(10) << RAADist[ipT][iPhi] << "\n";
+		}
+
+	file_out.close();
+
+	return 1;
+}
+
+
+void energyLoss::runELossHeavyFlavour()
+{
+	if (loaddsdpti2() != 1) return;
+
+	FdAHaltonSeqInit(150);
+
+	std::vector<std::vector<double>> RAADist(m_Grids.finPtsLength(), std::vector<double>(m_phiGridN, 0.0));
+
+	std::vector<double> pathLengthDist(m_phiGridN, 0.0), temperatureDist(m_phiGridN, 0.0);
+
+	#pragma omp declare reduction(vectorDoublePlus : std::vector<double> : \
+                              	  std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
+                    			  initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+	
+	#pragma omp parallel for reduction(vectorDoublePlus : pathLengthDist, temperatureDist) schedule(dynamic)
+	for (size_t iPhi=0; iPhi<m_phiGridN; iPhi++) {
+		double phi = m_phiGridPts[iPhi];
+
+		std::vector<double> sumRAA1(m_Grids.finPtsLength(), 0.0);
+
+		std::vector<std::vector<double>> sumRAA2(m_Grids.finPtsLength(), std::vector<double>(m_Grids.FdpPtsLength(), 0.0));
+
+		double weightsumEL = 0.0, weightsumPLT = 0.0; //energy and path-length and temperature loss weightsum
+
+		for (size_t iXY=0; iXY<m_xGridPts.size(); iXY++) {
+			double x = m_xGridPts[iXY], y = m_yGridPts[iXY];
+			double binCollDensity = m_binCollDensity.interpolation(x, y);
+
+			if (binCollDensity > 0) {
+				weightsumEL += binCollDensity;
+
+				std::vector<double> radRAA1; std::vector<std::vector<double>> radRAA2; std::vector<double> collEL;
+				double pathLength, temperature;
+				radCollEnergyLoss(x, y, phi, radRAA1, radRAA2, collEL, pathLength, temperature);
+
+				if (pathLength > m_tau0) { //checking if path-length is larger than thermalization time
+
+					for (auto &cEL : collEL) cEL += 1e-12; //modifying collEL to prevent division by 0
+
+							 weightsumPLT += binCollDensity;
+					 pathLengthDist[iPhi] += (pathLength*binCollDensity);
+					temperatureDist[iPhi] += (temperature*binCollDensity);
+
+					std::vector<double> singleRAA1; std::vector<std::vector<double>> singleRAA2;
+					gaussFilterIntegrate(radRAA1, radRAA2, collEL, singleRAA1, singleRAA2);
+
+					for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {
+						sumRAA1[iFinPts] += singleRAA1[iFinPts]*binCollDensity;
+						for (size_t iFdp=0; iFdp<m_Grids.FdpPtsLength(); iFdp++) {
+							sumRAA2[iFinPts][iFdp] += singleRAA2[iFinPts][iFdp]*binCollDensity;
+						}
+					}
+				}
+				else {// if path length is smaller than tau0:						
+					for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {//multiplying RAA1 (which is 1) with binary collision function as weigth and adding to RAA sum; RAA2 is 0 in this case
+						sumRAA1[iFinPts] += binCollDensity;
+					}
+				}
+			}
+		}
+
+		std::for_each(sumRAA1.begin(), sumRAA1.end(), [weightsumEL](double &c){c/=weightsumEL;});
+		for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {
+			std::for_each(sumRAA2[iFinPts].begin(), sumRAA2[iFinPts].end(), [weightsumEL](double &c){c/=weightsumEL;});
+		}
+		for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {
+			RAADist[iFinPts][iPhi] = sumRAA1[iFinPts] + poly::cubicIntegrate(m_Grids.FdpPts(), sumRAA2[iFinPts])/m_Grids.finPts(iFinPts);
+		}
+		pathLengthDist[iPhi] /= weightsumPLT; temperatureDist[iPhi] /= weightsumPLT;
+	}
+
+	std::vector<double> avgPathLength, avgTemp;
+	calculateAvgPathlenTemps(pathLengthDist, temperatureDist, avgPathLength, avgTemp);
+
+	if (exportResults(m_pName, RAADist, avgPathLength, avgTemp) != 1) return;
+}
+
+void energyLoss::runELossLightQuarks()
+{
+	const std::vector<std::string> lightQuarksList{"Down", "DownBar", "Strange", "Up", "UpBar"};
+
+	std::vector<interpolationF<double>> dsdpti2LightQuarks(lightQuarksList.size());
+	for (size_t iLQ=0; iLQ<lightQuarksList.size(); iLQ++)
+		if (loaddsdpti2(lightQuarksList[iLQ], dsdpti2LightQuarks[iLQ]) != 1) return;
+
+	FdAHaltonSeqInit(100);
+
+	std::vector<std::vector<std::vector<double>>> RAADist(lightQuarksList.size(), std::vector<std::vector<double>>(m_Grids.finPtsLength(), std::vector<double>(m_phiGridN)));
+
+	std::vector<double> pathLengthDist(m_phiGridN, 0.0), temperatureDist(m_phiGridN, 0.0);
+
+	#pragma omp declare reduction(vectorDoublePlus : std::vector<double> : \
+                              	  std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
+                    			  initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+	
+	#pragma omp parallel for reduction(vectorDoublePlus : pathLengthDist, temperatureDist) schedule(dynamic)
+	for (size_t iPhi=0; iPhi<m_phiGridN; iPhi++) {
+		double phi = m_phiGridPts[iPhi];
+
+		std::vector<std::vector<double>> sumRAA1(lightQuarksList.size(), std::vector<double>(m_Grids.finPtsLength(), 0.0));		
+		std::vector<std::vector<std::vector<double>>> sumRAA2(lightQuarksList.size(), std::vector<std::vector<double>>(m_Grids.finPtsLength(), std::vector<double>(m_Grids.FdpPtsLength(), 0.0)));
+	
+		double weightsumEL = 0.0, weightsumPLT = 0.0; //energy and path-length and temperature loss weightsum
+
+		for (size_t iXY=0; iXY<m_xGridPts.size(); iXY++) {
+			double x = m_xGridPts[iXY], y = m_yGridPts[iXY];
+			double binCollDensity = m_binCollDensity.interpolation(x, y);
+
+			if (binCollDensity > 0) {
+				weightsumEL += binCollDensity;
+
+				std::vector<double> radRAA1; std::vector<std::vector<double>> radRAA2; std::vector<double> collEL;
+				double pathLength, temperature;
+				radCollEnergyLoss(x, y, phi, radRAA1, radRAA2, collEL, pathLength, temperature);
+
+				if (pathLength > m_tau0) { //checking if path-length is larger than thermalization time
+
+					for (auto &cEL : collEL) cEL += 1e-12; //modifying collEL to prevent division by 0
+
+							 weightsumPLT += binCollDensity;
+					 pathLengthDist[iPhi] += (pathLength*binCollDensity);
+					temperatureDist[iPhi] += (temperature*binCollDensity);
+
+					std::vector<std::vector<double>> singleRAA1(lightQuarksList.size());
+					std::vector<std::vector<std::vector<double>>> singleRAA2(lightQuarksList.size());
+					for (size_t iLQ=0; iLQ<lightQuarksList.size(); iLQ++)
+						gaussFilterIntegrate(dsdpti2LightQuarks[iLQ], radRAA1, radRAA2, collEL, singleRAA1[iLQ], singleRAA2[iLQ]);
+					
+					for (size_t iLQ=0; iLQ<lightQuarksList.size(); iLQ++) {
+						for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {
+							sumRAA1[iLQ][iFinPts] += singleRAA1[iLQ][iFinPts]*binCollDensity;
+							for (size_t iFdp=0; iFdp<m_Grids.FdpPtsLength(); iFdp++)
+								sumRAA2[iLQ][iFinPts][iFdp] += singleRAA2[iLQ][iFinPts][iFdp]*binCollDensity;
+						}
+					}
+				}
+				else {
+					for (size_t iLQ=0; iLQ<lightQuarksList.size(); iLQ++)
+						for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++)
+							sumRAA1[iLQ][iFinPts] += binCollDensity;
+				}
+			}			
+		}
+
+		for (size_t iLQ=0; iLQ<lightQuarksList.size(); iLQ++) {
+			std::for_each(sumRAA1[iLQ].begin(), sumRAA1[iLQ].end(), [weightsumEL](double &c){ c/=weightsumEL; });
+			for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {
+				std::for_each(sumRAA2[iLQ][iFinPts].begin(), sumRAA2[iLQ][iFinPts].end(), [weightsumEL](double &c){ c/=weightsumEL; });
+			}
+		}
+
+		//setting RAA(pT,phi) value by integrating over p:
+		for (size_t iLQ=0; iLQ<lightQuarksList.size(); iLQ++) {
+			for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {
+				RAADist[iLQ][iFinPts][iPhi] = sumRAA1[iLQ][iFinPts] + poly::cubicIntegrate(m_Grids.FdpPts(), sumRAA2[iLQ][iFinPts])/m_Grids.finPts(iFinPts);
+			}
+		}
+
+		pathLengthDist[iPhi] /= weightsumPLT; temperatureDist[iPhi] /= weightsumPLT;
+	}
+
+	std::vector<double> avgPathLength, avgTemp;
+	calculateAvgPathlenTemps(pathLengthDist, temperatureDist, avgPathLength, avgTemp);
+
+	for (size_t iLQ=0; iLQ<lightQuarksList.size(); iLQ++) {
+		if (exportResults(lightQuarksList[iLQ], RAADist[iLQ], avgPathLength, avgTemp) != 1) return;
+	}
+}
+
+void energyLoss::runELossLightFlavour()
+{
+	if (loaddsdpti2() != 1) return;
+
+	dAHaltonSeqInit(1000);
+
+	std::vector<std::vector<double>> RAADist(m_Grids.finPtsLength(), std::vector<double>(m_phiGridN, 0.0));
+
+	std::vector<double> pathLengthDist(m_phiGridN, 0.0), temperatureDist(m_phiGridN, 0.0);
+
+	#pragma omp declare reduction(vectorDoublePlus : std::vector<double> : \
+                              	  std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
+                    			  initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+	
+	#pragma omp parallel for reduction(vectorDoublePlus : pathLengthDist, temperatureDist) schedule(dynamic)
+	for (size_t iPhi=0; iPhi<m_phiGridN; iPhi++) {
+		double phi = m_phiGridPts[iPhi];
+
+		std::vector<double> sumRAA(m_Grids.finPtsLength(), 0.0);
+
+		double weightsumEL = 0.0, weightsumPLT = 0.0; //energy and path-length and temperature loss weightsum
+
+		for (size_t iXY=0; iXY<m_xGridPts.size(); iXY++) {
+			double x = m_xGridPts[iXY], y = m_yGridPts[iXY];
+			double binCollDensity = m_binCollDensity.interpolation(x, y);
+
+			if (binCollDensity > 0) {
+				weightsumEL += binCollDensity;
+
+				std::vector<double> radRAA; std::vector<double> collEL;
+				double pathLength, temperature;
+				radCollEnergyLoss(x, y, phi, radRAA, collEL, pathLength, temperature);
+
+				if (pathLength > m_tau0) { //checking if path-length is larger than thermalization time
+
+					for (auto &cEL : collEL) cEL += 1e-12; //modifying collEL to prevent division by 0
+
+							 weightsumPLT += binCollDensity;
+					 pathLengthDist[iPhi] += (pathLength*binCollDensity);
+					temperatureDist[iPhi] += (temperature*binCollDensity);
+
+					std::vector<double> singleRAA;
+					gaussFilterIntegrate(radRAA, collEL, singleRAA);
+
+					for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {
+						sumRAA[iFinPts] += singleRAA[iFinPts]*binCollDensity;
+					}
+				}
+				else {// if path length is smaller than tau0:						
+					for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {//multiplying RAA1 (which is 1) with binary collision function as weigth and adding to RAA sum
+						sumRAA[iFinPts] += binCollDensity;
+					}
+				}
+			}
+		}
+
+		for (size_t iFinPts=0; iFinPts<m_Grids.finPtsLength(); iFinPts++) {
+			RAADist[iFinPts][iPhi] = sumRAA[iFinPts]/weightsumEL;
+		}
+
+		pathLengthDist[iPhi] /= weightsumPLT; temperatureDist[iPhi] /= weightsumPLT;
+	}
+
+	std::vector<double> avgPathLength, avgTemp;
+	calculateAvgPathlenTemps(pathLengthDist, temperatureDist, avgPathLength, avgTemp);
+
+	if (exportResults(m_pName, RAADist, avgPathLength, avgTemp) != 1) return;	
 }
