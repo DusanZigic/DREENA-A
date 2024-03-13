@@ -820,7 +820,7 @@ void energyLoss::radCollEnergyLoss(double x, double y, double phi, std::vector<d
 			NormSparseV.push_back(poly::linearIntegrate(currNormTabTau, currNormTabVal)); //setting value of current norm table
 
 			for (const auto &x : m_Grids.xPts()) {// loop over xpts
-				for (int l=0; l<currLTTabL.size(); l++) {// loop over current path-length and temperature table
+				for (size_t l=0; l<currLTTabL.size(); l++) {// loop over current path-length and temperature table
 					currDndxTabTau[l] = currLTTabL[l];											   //setting path-lengths
 					currDndxTabVal[l] = m_Ldndx.interpolation(currLTTabL[l], p, currLTTabT[l], x); //setting Ldndx values
 				}
