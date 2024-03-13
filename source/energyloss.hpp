@@ -17,13 +17,15 @@ public:
 private:
     bool m_error; //flag that checks if previous calculation is done properly
 
-    std::string m_collsys;                 // collision system
-    std::string m_sNN;                     // collision energy
-    std::string m_pName;                   // particle name
-    std::string m_centrality;              // centrality class
-    double m_xB;                           // xB value
-    size_t m_xGridN, m_yGridN, m_phiGridN; // initial position grid points and angle number
-    double m_TIMESTEP, m_TCRIT;	           // time step and critical temperature
+    std::string m_collsys;      // collision system
+    std::string m_sNN;          // collision energy
+    std::string m_pName;        // particle name
+    std::string m_centrality;   // centrality class
+    double m_xB;                // xB value
+    size_t m_xGridN;            // initial position grid points and angle number
+    long m_yGridN;              // initial position grid points and angle number
+    size_t m_phiGridN;          // initial position grid points and angle number
+    double m_TIMESTEP, m_TCRIT;	// time step and critical temperature
 
     double m_nf;			     // effective number of flavours
     const double m_lambda = 0.2; // QCD scale

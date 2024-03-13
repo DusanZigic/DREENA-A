@@ -766,7 +766,7 @@ int energyLoss::generateInitPosPoints()
             initGridRange = std::abs(bcDensDomain[0][1]) - 0.5;
 
 		for (size_t iX=0; iX<=m_xGridN; iX++) {
-			for (size_t iY=0; iY<=m_yGridN; iY++) {
+			for (long iY=0; iY<=m_yGridN; iY++) {
                 m_xGridPts.push_back(-1.0*initGridRange + 2.0*iX*initGridRange/static_cast<double>(m_xGridN));
                 m_yGridPts.push_back(-1.0*initGridRange + 2.0*iY*initGridRange/static_cast<double>(m_yGridN));
             }
