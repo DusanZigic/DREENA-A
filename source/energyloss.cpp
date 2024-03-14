@@ -425,10 +425,11 @@ int energyLoss::loadTempEvol()
 		double tempDataAMax = *std::max_element(tempDataA.begin(), tempDataA.end());
 		double tempDataBMax = *std::max_element(tempDataB.begin(), tempDataB.end());
 
-        if (tempDataAMax < tempDataBMax)
+        if (tempDataAMax < tempDataBMax) {
             tempT.assign(tempDataA.begin(), tempDataA.end()); // 4th column is temperature
-        else
+		} else {
             tempT.assign(tempDataB.begin(), tempDataB.end()); // 5th column is temperature
+		}
 
 	}
 	else { //evolution file is not suitable for interpolation
@@ -486,7 +487,6 @@ int energyLoss::loadTempEvol()
 		m_tempEvol.setData(tempTauFull, tempXFull, tempYFull, tempTFull);
 	}
 	else {// if not, creating interpolated function with values from file:
-
 		m_tempEvol.setData(tempTau, tempX, tempY, tempT);
 	}
 
@@ -620,6 +620,8 @@ int energyLoss::loadBinCollPoints(std::vector<std::vector<double>> &bcPoints)
 
 int energyLoss::generateInitPosPoints()
 {
+	m_xGridPts.resize(0); m_yGridPts.resize(0); m_phiGridPts.resize(0);
+
 	if (m_yGridN == -2) {
 		//if yGridN is set to -2, MonteCarlo method is used to generate initial position points and angles
 		//number of x-y initial position points is equal to m_xGridN
