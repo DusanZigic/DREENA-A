@@ -1266,14 +1266,14 @@ void energyLoss::gaussFilterIntegrate(const std::vector<double> &radiativeRAA, c
 void energyLoss::calculateAvgPathlenTemps(const std::vector<double> &pathLenghDist, const std::vector<double> &temperatureDist, std::vector<double> &avgPathLength, std::vector<double> &avgTemp) const
 {
 	interpolationF<double> pathLenghDistInt(m_phiGridPts, pathLenghDist);
-	avgPathLength.push_back(poly::cubicIntegrate(m_phiGridPts, pathLenghDist)/2.0/M_PI);
-	avgPathLength.push_back((pathLenghDistInt.interpolation(m_phiGridPts.front()) + pathLenghDistInt.interpolation(m_phiGridPts.back()))/2.0);
-	avgPathLength.push_back((pathLenghDistInt.interpolation(M_PI/2.0)             + pathLenghDistInt.interpolation(3.0*M_PI/2.0))       /2.0);
+	avgPathLength[0] = poly::cubicIntegrate(m_phiGridPts, pathLenghDist)/2.0/M_PI;
+	avgPathLength[1] = (pathLenghDistInt.interpolation(m_phiGridPts.front()) + pathLenghDistInt.interpolation(m_phiGridPts.back()))/2.0;
+	avgPathLength[2] = (pathLenghDistInt.interpolation(M_PI/2.0)             + pathLenghDistInt.interpolation(3.0*M_PI/2.0))       /2.0;
 
 	interpolationF<double> temperatureDistInt(m_phiGridPts, temperatureDist);
-	avgTemp.push_back(poly::cubicIntegrate(m_phiGridPts, temperatureDist)/2.0/M_PI);
-	avgTemp.push_back((temperatureDistInt.interpolation(m_phiGridPts.front()) + temperatureDistInt.interpolation(m_phiGridPts.back()))/2.0);
-	avgTemp.push_back((temperatureDistInt.interpolation(M_PI/2.0)             + temperatureDistInt.interpolation(3.0*M_PI/2.0))       /2.0);
+	avgTemp[0] = poly::cubicIntegrate(m_phiGridPts, temperatureDist)/2.0/M_PI;
+	avgTemp[1] = (temperatureDistInt.interpolation(m_phiGridPts.front()) + temperatureDistInt.interpolation(m_phiGridPts.back()))/2.0;
+	avgTemp[2] = (temperatureDistInt.interpolation(M_PI/2.0)             + temperatureDistInt.interpolation(3.0*M_PI/2.0))       /2.0;
 }
 
 int energyLoss::exportResults(const std::string &pName, const std::vector<std::vector<double>> &RAADist, const std::vector<double> avgPathLength, const std::vector<double> avgTemp)
@@ -1401,7 +1401,7 @@ void energyLoss::runELossHeavyFlavour()
 		pathLengthDist[iPhi] /= weightsumPLT; temperatureDist[iPhi] /= weightsumPLT;
 	}
 
-	std::vector<double> avgPathLength, avgTemp;
+	std::vector<double> avgPathLength(3, 0.0), avgTemp(3, 0.0);
 	calculateAvgPathlenTemps(pathLengthDist, temperatureDist, avgPathLength, avgTemp);
 
 	if (exportResults(m_pName, RAADist, avgPathLength, avgTemp) != 1) return;
@@ -1491,7 +1491,7 @@ void energyLoss::runELossLightQuarks()
 		pathLengthDist[iPhi] /= weightsumPLT; temperatureDist[iPhi] /= weightsumPLT;
 	}
 
-	std::vector<double> avgPathLength, avgTemp;
+	std::vector<double> avgPathLength(3, 0.0), avgTemp(3, 0.0);
 	calculateAvgPathlenTemps(pathLengthDist, temperatureDist, avgPathLength, avgTemp);
 
 	for (size_t iLQ=0; iLQ<lightQuarksList.size(); iLQ++) {
@@ -1562,7 +1562,7 @@ void energyLoss::runELossLightFlavour()
 		pathLengthDist[iPhi] /= weightsumPLT; temperatureDist[iPhi] /= weightsumPLT;
 	}
 
-	std::vector<double> avgPathLength, avgTemp;
+	std::vector<double> avgPathLength(3, 0.0), avgTemp(3, 0.0);
 	calculateAvgPathlenTemps(pathLengthDist, temperatureDist, avgPathLength, avgTemp);
 
 	if (exportResults(m_pName, RAADist, avgPathLength, avgTemp) != 1) return;	
