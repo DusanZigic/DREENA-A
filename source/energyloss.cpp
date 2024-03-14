@@ -115,8 +115,8 @@ void energyLoss::runEnergyLoss()
 	if (loadLNorm() != 1) return;
 	if (loadLColl() != 1) return;
 
-    if (loadTempEvol()          != 1) return;
     if (generateInitPosPoints() != 1) return;
+    if (loadTempEvol()          != 1) return;
 
 	if ((m_pName == "Bottom") || (m_pName == "Charm")) {
 		runELossHeavyFlavour();
@@ -398,6 +398,9 @@ int energyLoss::loadTempEvol()
 	if (columnCnt == 4) { //evolution file has 4 columns (just temperature)
 
 		while (std::getline(file_in, line)) {
+			if (line.at(0) == '#')
+				continue;
+			
 			std::stringstream ss(line);
 			ss >> buffer; tempTau.push_back(buffer);
 			ss >> buffer; tempX.push_back(buffer);
@@ -408,6 +411,9 @@ int energyLoss::loadTempEvol()
 	else if (columnCnt == 5) { //evolution file has 5 columns (energy density and temperature)
 
 		while (std::getline(file_in, line)) {
+			if (line.at(0) == '#')
+				continue;
+			
 			std::stringstream ss(line);
 			ss >> buffer; tempTau.push_back(buffer);
 			ss >> buffer; tempX.push_back(buffer);
@@ -430,7 +436,7 @@ int energyLoss::loadTempEvol()
 		std::cerr << "Error: number of columns is not appropriate for temperature evolution interpolation. Aborting..." << std::endl;
 		return -2;
 	}
-
+	
     file_in.close();
 
     double tempXMin = *std::min_element(tempX.begin(), tempX.end());
@@ -678,7 +684,7 @@ int energyLoss::generateInitPosPoints()
 		//if yGridN is set to -1, MonteCarlo method is used to generate initial position points, while angles are on equidistant grid
 		//number of x-y initial position points is equal to xGridN
 
-		interpolationF<double> binCollDensity; if (loadBinCollDensity(binCollDensity) != 1) return -1;
+		interpolationF<double> binCollDensity; if (loadBinCollDensity(binCollDensity) != 1) return -1;		
 		
 		std::vector<std::vector<double>> bcDensDomain = binCollDensity.domain();
 		std::vector<double> bcDensCoDomain = binCollDensity.codomain();
