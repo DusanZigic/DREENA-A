@@ -504,6 +504,9 @@ int energyLoss::loadBinCollDensity(interpolationF<double> &binCollDensity)
 
 	while (std::getline(file_in, line))
 	{
+		if (line.at(0) == '#')
+			continue;
+		
 		std::stringstream ss(line);
 		ss >> buffer;    bcdX.push_back(buffer);
 		ss >> buffer;    bcdY.push_back(buffer);
