@@ -27,54 +27,53 @@ energyLoss::energyLoss(int argc, const char *argv[])
 		m_error = true;
 	}
 
-	std::map<std::string, std::string> inputparams;
-	for (const auto &in : inputs)
-	{
+	std::map<std::string, std::string> inputParams;
+	for (const auto &in : inputs) {
  	   	std::string key = in.substr(0, in.find("="));
  	   	std::string::size_type n = 0; while ((n = key.find("-", n)) != std::string::npos) {key.replace(n, 1, ""); n += 0;} //replacing all '-'
 		std::string val = in.substr(in.find("=")+1, in.length());
-		inputparams[key] = val;
+		inputParams[key] = val;
 	}
 
 	//checking if configuration file is provided:
 	std::map<std::string, std::string> inputParamsFile;
-	if (inputparams.count("c") > 0) {
-		if (loadInputsFromFile(inputparams.at("c"), inputParamsFile) != 1) {
+	if (inputParams.count("c") > 0) {
+		if (loadInputsFromFile(inputParams.at("c"), inputParamsFile) != 1) {
 			m_error = true;
 		}
 	}
 
 	//setting parameter values based on config file values and overwriting with command line values:
 	//
-	m_collsys = "PbPb"; if (inputParamsFile.count("collsys") > 0) m_collsys = inputParamsFile["collsys"];
-						if (  inputparams.count("collsys") > 0) m_collsys =   inputparams["collsys"];
+	m_collsys = "PbPb"; if (inputParamsFile.count("collsys") > 0) m_collsys = inputParamsFile.at("collsys");
+						if (    inputParams.count("collsys") > 0) m_collsys =     inputParams.at("collsys");
 	
-	m_sNN = "5020GeV"; if (inputParamsFile.count("sNN") > 0) m_sNN = inputParamsFile["sNN"];
-					   if (  inputparams.count("sNN") > 0) m_sNN =   inputparams["sNN"];
+	m_sNN = "5020GeV"; if (inputParamsFile.count("sNN") > 0) m_sNN = inputParamsFile.at("sNN");
+					   if (    inputParams.count("sNN") > 0) m_sNN =     inputParams.at("sNN");
 
-	m_pName = "Charm"; if (inputParamsFile.count("pName") > 0) m_pName = inputParamsFile["pName"];
-					   if (  inputparams.count("pName") > 0) m_pName =   inputparams["pName"];
+	m_pName = "Charm"; if (inputParamsFile.count("pName") > 0) m_pName = inputParamsFile.at("pName");
+					   if (    inputParams.count("pName") > 0) m_pName =     inputParams.at("pName");
 
-	m_centrality = "30-40%"; if (inputParamsFile.count("centrality") > 0) m_centrality = inputParamsFile["centrality"];
-						     if (  inputparams.count("centrality") > 0) m_centrality =   inputparams["centrality"];
+	m_centrality = "30-40%"; if (inputParamsFile.count("centrality") > 0) m_centrality = inputParamsFile.at("centrality");
+						     if (    inputParams.count("centrality") > 0) m_centrality =     inputParams.at("centrality");
 
-	m_xB = 0.6; if (inputParamsFile.count("xB") > 0) m_xB = stod(inputParamsFile["xB"]);
-				if (  inputparams.count("xB") > 0) m_xB = stod(  inputparams["xB"]);
+	m_xB = 0.6; if (inputParamsFile.count("xB") > 0) m_xB = stod(inputParamsFile.at("xB"));
+				if (    inputParams.count("xB") > 0) m_xB = stod(    inputParams.at("xB"));
 
-    m_xGridN = 25; if (inputParamsFile.count("xGridN") > 0) m_xGridN = stoi(inputParamsFile["xGridN"]);
-				   if (  inputparams.count("xGridN") > 0) m_xGridN = stoi(  inputparams["xGridN"]);
+    m_xGridN = 25; if (inputParamsFile.count("xGridN") > 0) m_xGridN = stoi(inputParamsFile.at("xGridN"));
+				   if (    inputParams.count("xGridN") > 0) m_xGridN = stoi(    inputParams.at("xGridN"));
     
-    m_yGridN = 25; if (inputParamsFile.count("yGridN") > 0) m_yGridN = stoi(inputParamsFile["yGridN"]);
-				   if (  inputparams.count("yGridN") > 0) m_yGridN = stoi(  inputparams["yGridN"]);
+    m_yGridN = 25; if (inputParamsFile.count("yGridN") > 0) m_yGridN = stoi(inputParamsFile.at("yGridN"));
+				   if (    inputParams.count("yGridN") > 0) m_yGridN = stoi(    inputParams.at("yGridN"));
 
-	m_phiGridN = 25; if (inputParamsFile.count("phiGridN") > 0) m_phiGridN = stoi(inputParamsFile["phiGridN"]);
-					 if (  inputparams.count("phiGridN") > 0) m_phiGridN = stoi(  inputparams["phiGridN"]);
+	m_phiGridN = 25; if (inputParamsFile.count("phiGridN") > 0) m_phiGridN = stoi(inputParamsFile.at("phiGridN"));
+					 if (    inputParams.count("phiGridN") > 0) m_phiGridN = stoi(    inputParams.at("phiGridN"));
 
-	m_TIMESTEP = 0.1; if (inputParamsFile.count("TIMESTEP") > 0) m_TIMESTEP = stod(inputParamsFile["TIMESTEP"]);
-					  if (  inputparams.count("TIMESTEP") > 0) m_TIMESTEP = stod(  inputparams["TIMESTEP"]);
+	m_TIMESTEP = 0.1; if (inputParamsFile.count("TIMESTEP") > 0) m_TIMESTEP = stod(inputParamsFile.at("TIMESTEP"));
+					  if (    inputParams.count("TIMESTEP") > 0) m_TIMESTEP = stod(    inputParams.at("TIMESTEP"));
 
-	m_TCRIT = 0.155; if (inputParamsFile.count("TCRIT") > 0) m_TCRIT = stod(inputParamsFile["TCRIT"]);
-					 if (  inputparams.count("TCRIT") > 0) m_TCRIT = stod(  inputparams["TCRIT"]);
+	m_TCRIT = 0.155; if (inputParamsFile.count("TCRIT") > 0) m_TCRIT = stod(inputParamsFile.at("TCRIT"));
+					 if (    inputParams.count("TCRIT") > 0) m_TCRIT = stod(    inputParams.at("TCRIT"));
 
 	//checking if provided value of sNN is an option:
 	if ((m_sNN != "5440GeV") && (m_sNN != "5020GeV") && (m_sNN != "2760GeV") && (m_sNN != "200GeV")) {
