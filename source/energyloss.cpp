@@ -34,6 +34,16 @@ energyLoss::energyLoss(int argc, const char *argv[])
 		std::string val = in.substr(in.find("=")+1, in.length());
 		inputParams[key] = val;
 	}
+	
+	std::vector<std::string> arguments = {"collsys", "sNN", "pName", "centrality", "xB", "xGridN", "yGridN", "phiGridN", "TIMESTEP", "TCRIT"};
+	for (const auto &inputParam : inputParams) {
+		if(std::find(arguments.begin(), arguments.end(), inputParam.first) == arguments.end()) {
+			std::cerr << "Error: provide argument flag: " << inputParam.first << " is not an option." << std::endl;
+			std::cerr << "Valid parameters and default values are: ";
+			std::cerr << "--collsys=PbPb --sNN=5020GeV --pName=Charm --centrality=30-40% --xB=0.6 --xGridN=50 --yGridN=50 --phiGridN=25 --TIMESTEP=0.1 --TCRIT=0.155" << std::endl;
+			m_error = true;
+		}
+	}
 
 	//checking if configuration file is provided:
 	std::map<std::string, std::string> inputParamsFile;
