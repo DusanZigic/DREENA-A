@@ -176,37 +176,6 @@ double energyLoss::productLog(double x) const
 }
 
 
-int energyLoss::loaddsdpti2()
-{
-	const std::string path_in = "./ptDists/ptDist" + m_sNN + "/ptDist_" + m_sNN + "_" + m_pName + ".dat";
-
-	std::ifstream file_in(path_in);
-	if (!file_in.is_open()) {
-		std::cerr << "Error: unable to open initial pT distribution file. Aborting..." << std::endl;
-		return -1;
-	}
-
-	std::vector<double> pTdistX, pTdistF; //defining vectors that store dsdpti2 values
-
-	std::string line; double buffer;
-
-	while (std::getline(file_in, line))
-	{
-        if (line.at(0) == '#')
-            continue;
-
-		std::stringstream ss(line);
-		ss >> buffer; pTdistX.push_back(buffer);
-		ss >> buffer; pTdistF.push_back(buffer);
-	}
-
-	m_dsdpti2.setData(pTdistX, pTdistF);
-
-	file_in.close();
-
-	return 1;
-}
-
 int energyLoss::loaddsdpti2(const std::string &pname, interpolationF<double> &dsdpti2int)const 
 {
 	const std::string path_in = "./ptDists/ptDist" + m_sNN + "/ptDist_" + m_sNN + "_" + pname + ".dat";
@@ -387,130 +356,6 @@ int energyLoss::loadLColl()
 	return 1;
 }
 
-int energyLoss::loadTempEvol()
-{
-	std::string path_in = "./evols/tempevol_cent=" + m_centrality + ".dat";
-	std::ifstream file_in(path_in, std::ios_base::in);
-	if (!file_in.is_open()) {
-		std::cerr << "Error: unable to open temperature evolution file. Aborting..." << std::endl;
-		return -1;
-	}
-
-	std::string line; double buffer;
-
-    while (std::getline(file_in, line)) { // skiping header lines that start with '#'
-        if (line.at(0) == '#')
-            continue;
-        break;
-    }
-
-	//checking how many columns evolution file has:
-	size_t columnCnt = 0;
-	std::stringstream lineSStr(line); while (lineSStr >> buffer) columnCnt++;
-
-	file_in.clear(); file_in.seekg(0); //return to the begining of file
-
-	std::vector<double> tempTau, tempX, tempY, tempDataA, tempDataB, tempT;
-
-	if (columnCnt == 4) { //evolution file has 4 columns (just temperature)
-
-		while (std::getline(file_in, line)) {
-			if (line.at(0) == '#')
-				continue;
-			
-			std::stringstream ss(line);
-			ss >> buffer; tempTau.push_back(buffer);
-			ss >> buffer; tempX.push_back(buffer);
-			ss >> buffer; tempY.push_back(buffer);
-			ss >> buffer; tempT.push_back(buffer);
-		}
-	}
-	else if (columnCnt == 5) { //evolution file has 5 columns (energy density and temperature)
-
-		while (std::getline(file_in, line)) {
-			if (line.at(0) == '#')
-				continue;
-			
-			std::stringstream ss(line);
-			ss >> buffer; tempTau.push_back(buffer);
-			ss >> buffer; tempX.push_back(buffer);
-			ss >> buffer; tempY.push_back(buffer);
-			ss >> buffer; tempDataA.push_back(buffer);
-			ss >> buffer; tempDataB.push_back(buffer);
-		}
-
-		double tempDataAMax = *std::max_element(tempDataA.begin(), tempDataA.end());
-		double tempDataBMax = *std::max_element(tempDataB.begin(), tempDataB.end());
-
-        if (tempDataAMax < tempDataBMax) {
-            tempT.assign(tempDataA.begin(), tempDataA.end()); // 4th column is temperature
-		} else {
-            tempT.assign(tempDataB.begin(), tempDataB.end()); // 5th column is temperature
-		}
-
-	}
-	else { //evolution file is not suitable for interpolation
-
-		std::cerr << "Error: number of columns is not appropriate for temperature evolution interpolation. Aborting..." << std::endl;
-		return -2;
-	}
-	
-    file_in.close();
-
-    double tempXMin = *std::min_element(tempX.begin(), tempX.end());
-    double tempYMin = *std::min_element(tempY.begin(), tempY.end());
-
-	if ((tempXMin >= 0.0) && (tempYMin >= 0.0)) {// if temperature evolution is defined only in the first quadrant
-
-		//creating tau grid:
-		std::vector<double> tempTauGrid(tempTau.begin(), tempTau.end());
-		std::sort(tempTauGrid.begin(), tempTauGrid.end());
-		tempTauGrid.erase(unique(tempTauGrid.begin(), tempTauGrid.end()), tempTauGrid.end());
-
-		//creating full x grid:
-		std::vector<double> tempXGrid(tempX.begin(), tempX.end());
-        size_t sizeX = tempXGrid.size();
-        tempXGrid.reserve(sizeX * 2);
-        for (size_t i=0; i<sizeX; ++i)
-            tempXGrid.push_back(-1.0*tempXGrid[i]);
-		sort(tempXGrid.begin(), tempXGrid.end());
-		tempXGrid.erase(unique(tempXGrid.begin(), tempXGrid.end()), tempXGrid.end());
-
-		//creating full y grid:
-		std::vector<double> tempYGrid(tempY.begin(), tempY.end());
-        size_t sizeY = tempYGrid.size();
-        tempYGrid.reserve(sizeY * 2);
-        for (size_t i=0; i<sizeY; ++i)
-            tempYGrid.push_back(-1.0*tempYGrid[i]);
-		sort(tempYGrid.begin(), tempYGrid.end());
-		tempYGrid.erase(unique(tempYGrid.begin(), tempYGrid.end()), tempYGrid.end());
-
-        // temperature volution interpolated function in first quadtrant:
-		interpolationF<double> tempEvolFirstQuadrant(tempTau, tempX, tempY, tempT);
-
-		//creating full temperature evolution table:
-		std::vector<double> tempTauFull, tempXFull, tempYFull, tempTFull;
-		for (const auto &tau : tempTauGrid) {
-			for (const auto &x : tempXGrid) {
-				for (const auto &y : tempYGrid) {
-					tempTauFull.push_back(tau);
-					  tempXFull.push_back(x);
-					  tempYFull.push_back(y);
-					  tempTFull.push_back(tempEvolFirstQuadrant.interpolation(tau, std::abs(x), std::abs(y)));
-				}
-            }
-        }
-
-		m_tempEvol.setData(tempTauFull, tempXFull, tempYFull, tempTFull);
-	}
-	else {// if not, creating interpolated function with values from file:
-		m_tempEvol.setData(tempTau, tempX, tempY, tempT);
-	}
-
-	m_tau0 = m_tempEvol.domain()[0][0];
-
-	return 1;
-}
 
 int energyLoss::loadBinCollDensity(interpolationF<double> &binCollDensity)
 {
@@ -802,6 +647,131 @@ int energyLoss::generateInitPosPoints()
 
 		if (loadPhiPoints(m_phiGridPts) != 1) return -7;
 	}
+
+	return 1;
+}
+
+int energyLoss::loadTempEvol()
+{
+	std::string path_in = "./evols/tempevol_cent=" + m_centrality + ".dat";
+	std::ifstream file_in(path_in, std::ios_base::in);
+	if (!file_in.is_open()) {
+		std::cerr << "Error: unable to open temperature evolution file. Aborting..." << std::endl;
+		return -1;
+	}
+
+	std::string line; double buffer;
+
+    while (std::getline(file_in, line)) { // skiping header lines that start with '#'
+        if (line.at(0) == '#')
+            continue;
+        break;
+    }
+
+	//checking how many columns evolution file has:
+	size_t columnCnt = 0;
+	std::stringstream lineSStr(line); while (lineSStr >> buffer) columnCnt++;
+
+	file_in.clear(); file_in.seekg(0); //return to the begining of file
+
+	std::vector<double> tempTau, tempX, tempY, tempDataA, tempDataB, tempT;
+
+	if (columnCnt == 4) { //evolution file has 4 columns (just temperature)
+
+		while (std::getline(file_in, line)) {
+			if (line.at(0) == '#')
+				continue;
+			
+			std::stringstream ss(line);
+			ss >> buffer; tempTau.push_back(buffer);
+			ss >> buffer; tempX.push_back(buffer);
+			ss >> buffer; tempY.push_back(buffer);
+			ss >> buffer; tempT.push_back(buffer);
+		}
+	}
+	else if (columnCnt == 5) { //evolution file has 5 columns (energy density and temperature)
+
+		while (std::getline(file_in, line)) {
+			if (line.at(0) == '#')
+				continue;
+			
+			std::stringstream ss(line);
+			ss >> buffer; tempTau.push_back(buffer);
+			ss >> buffer; tempX.push_back(buffer);
+			ss >> buffer; tempY.push_back(buffer);
+			ss >> buffer; tempDataA.push_back(buffer);
+			ss >> buffer; tempDataB.push_back(buffer);
+		}
+
+		double tempDataAMax = *std::max_element(tempDataA.begin(), tempDataA.end());
+		double tempDataBMax = *std::max_element(tempDataB.begin(), tempDataB.end());
+
+        if (tempDataAMax < tempDataBMax) {
+            tempT.assign(tempDataA.begin(), tempDataA.end()); // 4th column is temperature
+		} else {
+            tempT.assign(tempDataB.begin(), tempDataB.end()); // 5th column is temperature
+		}
+
+	}
+	else { //evolution file is not suitable for interpolation
+
+		std::cerr << "Error: number of columns is not appropriate for temperature evolution interpolation. Aborting..." << std::endl;
+		return -2;
+	}
+	
+    file_in.close();
+
+    double tempXMin = *std::min_element(tempX.begin(), tempX.end());
+    double tempYMin = *std::min_element(tempY.begin(), tempY.end());
+
+	if ((tempXMin >= 0.0) && (tempYMin >= 0.0)) {// if temperature evolution is defined only in the first quadrant
+
+		//creating tau grid:
+		std::vector<double> tempTauGrid(tempTau.begin(), tempTau.end());
+		std::sort(tempTauGrid.begin(), tempTauGrid.end());
+		tempTauGrid.erase(unique(tempTauGrid.begin(), tempTauGrid.end()), tempTauGrid.end());
+
+		//creating full x grid:
+		std::vector<double> tempXGrid(tempX.begin(), tempX.end());
+        size_t sizeX = tempXGrid.size();
+        tempXGrid.reserve(sizeX * 2);
+        for (size_t i=0; i<sizeX; ++i)
+            tempXGrid.push_back(-1.0*tempXGrid[i]);
+		sort(tempXGrid.begin(), tempXGrid.end());
+		tempXGrid.erase(unique(tempXGrid.begin(), tempXGrid.end()), tempXGrid.end());
+
+		//creating full y grid:
+		std::vector<double> tempYGrid(tempY.begin(), tempY.end());
+        size_t sizeY = tempYGrid.size();
+        tempYGrid.reserve(sizeY * 2);
+        for (size_t i=0; i<sizeY; ++i)
+            tempYGrid.push_back(-1.0*tempYGrid[i]);
+		sort(tempYGrid.begin(), tempYGrid.end());
+		tempYGrid.erase(unique(tempYGrid.begin(), tempYGrid.end()), tempYGrid.end());
+
+        // temperature volution interpolated function in first quadtrant:
+		interpolationF<double> tempEvolFirstQuadrant(tempTau, tempX, tempY, tempT);
+
+		//creating full temperature evolution table:
+		std::vector<double> tempTauFull, tempXFull, tempYFull, tempTFull;
+		for (const auto &tau : tempTauGrid) {
+			for (const auto &x : tempXGrid) {
+				for (const auto &y : tempYGrid) {
+					tempTauFull.push_back(tau);
+					  tempXFull.push_back(x);
+					  tempYFull.push_back(y);
+					  tempTFull.push_back(tempEvolFirstQuadrant.interpolation(tau, std::abs(x), std::abs(y)));
+				}
+            }
+        }
+
+		m_tempEvol.setData(tempTauFull, tempXFull, tempYFull, tempTFull);
+	}
+	else {// if not, creating interpolated function with values from file:
+		m_tempEvol.setData(tempTau, tempX, tempY, tempT);
+	}
+
+	m_tau0 = m_tempEvol.domain()[0][0];
 
 	return 1;
 }
@@ -1349,7 +1319,7 @@ int energyLoss::exportResults(const std::string &pName, const std::vector<std::v
 
 void energyLoss::runELossHeavyFlavour()
 {
-	if (loaddsdpti2() != 1) return;
+	if (loaddsdpti2(m_pName, m_dsdpti2) != 1) return;
 
 	FdAHaltonSeqInit(150);
 
@@ -1518,7 +1488,7 @@ void energyLoss::runELossLightQuarks()
 
 void energyLoss::runELossLightFlavour()
 {
-	if (loaddsdpti2() != 1) return;
+	if (loaddsdpti2(m_pName, m_dsdpti2) != 1) return;
 
 	dAHaltonSeqInit(1000);
 

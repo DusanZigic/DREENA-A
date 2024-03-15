@@ -42,7 +42,6 @@ private:
     double productLog(double x) const;
 
     interpolationF<double> m_dsdpti2; // initial pT distribution interpolated function
-    int loaddsdpti2();
     int loaddsdpti2(const std::string &pname, interpolationF<double> &dsdpti2int) const;
     
     interpolationF<double> m_LNorm, m_Ldndx, m_LColl; // interpolated L tables
