@@ -36,6 +36,8 @@ private:
     gridPoints m_Grids; // grid points
     
 
+    int loadInputsFromFile(const std::string &filePath, std::map<std::string, std::string> &inputParamsFile);
+
     double productLog(double x) const;
 
     interpolationF<double> m_dsdpti2; // initial pT distribution interpolated function

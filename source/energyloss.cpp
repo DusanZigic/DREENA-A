@@ -37,53 +37,43 @@ energyLoss::energyLoss(int argc, const char *argv[])
 	}
 
 	//checking if configuration file is provided:
-	std::map<std::string, std::string> inputparams_f;
+	std::map<std::string, std::string> inputParamsFile;
 	if (inputparams.count("c") > 0) {
-		std::ifstream file_in(inputparams["c"]);
-		if (!file_in.is_open()) {
-			std::cerr << "Error: unable to open configuration file. Aborting..." << std::endl;
+		if (loadInputsFromFile(inputparams.at("c"), inputParamsFile) != 1) {
 			m_error = true;
 		}
-		std::string line, key, sep, val;
-		while (std::getline(file_in, line))
-		{
-			std::stringstream ss(line);
-			ss >> key; ss >> sep; ss >> val;
-			inputparams_f[key] = val;
-		}
-		file_in.close();
 	}
 
 	//setting parameter values based on config file values and overwriting with command line values:
 	//
-	m_collsys = "PbPb"; if (inputparams_f.count("collsys") > 0) m_collsys = inputparams_f["collsys"];
+	m_collsys = "PbPb"; if (inputParamsFile.count("collsys") > 0) m_collsys = inputParamsFile["collsys"];
 						if (  inputparams.count("collsys") > 0) m_collsys =   inputparams["collsys"];
 	
-	m_sNN = "5020GeV"; if (inputparams_f.count("sNN") > 0) m_sNN = inputparams_f["sNN"];
+	m_sNN = "5020GeV"; if (inputParamsFile.count("sNN") > 0) m_sNN = inputParamsFile["sNN"];
 					   if (  inputparams.count("sNN") > 0) m_sNN =   inputparams["sNN"];
 
-	m_pName = "Charm"; if (inputparams_f.count("pName") > 0) m_pName = inputparams_f["pName"];
+	m_pName = "Charm"; if (inputParamsFile.count("pName") > 0) m_pName = inputParamsFile["pName"];
 					   if (  inputparams.count("pName") > 0) m_pName =   inputparams["pName"];
 
-	m_centrality = "30-40%"; if (inputparams_f.count("centrality") > 0) m_centrality = inputparams_f["centrality"];
+	m_centrality = "30-40%"; if (inputParamsFile.count("centrality") > 0) m_centrality = inputParamsFile["centrality"];
 						     if (  inputparams.count("centrality") > 0) m_centrality =   inputparams["centrality"];
 
-	m_xB = 0.6; if (inputparams_f.count("xB") > 0) m_xB = stod(inputparams_f["xB"]);
+	m_xB = 0.6; if (inputParamsFile.count("xB") > 0) m_xB = stod(inputParamsFile["xB"]);
 				if (  inputparams.count("xB") > 0) m_xB = stod(  inputparams["xB"]);
 
-    m_xGridN = 25; if (inputparams_f.count("xGridN") > 0) m_xGridN = stoi(inputparams_f["xGridN"]);
+    m_xGridN = 25; if (inputParamsFile.count("xGridN") > 0) m_xGridN = stoi(inputParamsFile["xGridN"]);
 				   if (  inputparams.count("xGridN") > 0) m_xGridN = stoi(  inputparams["xGridN"]);
     
-    m_yGridN = 25; if (inputparams_f.count("yGridN") > 0) m_yGridN = stoi(inputparams_f["yGridN"]);
+    m_yGridN = 25; if (inputParamsFile.count("yGridN") > 0) m_yGridN = stoi(inputParamsFile["yGridN"]);
 				   if (  inputparams.count("yGridN") > 0) m_yGridN = stoi(  inputparams["yGridN"]);
 
-	m_phiGridN = 25; if (inputparams_f.count("phiGridN") > 0) m_phiGridN = stoi(inputparams_f["phiGridN"]);
+	m_phiGridN = 25; if (inputParamsFile.count("phiGridN") > 0) m_phiGridN = stoi(inputParamsFile["phiGridN"]);
 					 if (  inputparams.count("phiGridN") > 0) m_phiGridN = stoi(  inputparams["phiGridN"]);
 
-	m_TIMESTEP = 0.1; if (inputparams_f.count("TIMESTEP") > 0) m_TIMESTEP = stod(inputparams_f["TIMESTEP"]);
+	m_TIMESTEP = 0.1; if (inputParamsFile.count("TIMESTEP") > 0) m_TIMESTEP = stod(inputParamsFile["TIMESTEP"]);
 					  if (  inputparams.count("TIMESTEP") > 0) m_TIMESTEP = stod(  inputparams["TIMESTEP"]);
 
-	m_TCRIT = 0.155; if (inputparams_f.count("TCRIT") > 0) m_TCRIT = stod(inputparams_f["TCRIT"]);
+	m_TCRIT = 0.155; if (inputParamsFile.count("TCRIT") > 0) m_TCRIT = stod(inputParamsFile["TCRIT"]);
 					 if (  inputparams.count("TCRIT") > 0) m_TCRIT = stod(  inputparams["TCRIT"]);
 
 	//checking if provided value of sNN is an option:
@@ -101,6 +91,24 @@ energyLoss::energyLoss(int argc, const char *argv[])
 	else if (m_pName == "Gluon") m_MC = mu/std::sqrt(2.0);
 	else m_MC = mu/sqrt(6.0);
 	m_TCollConst = T;
+}
+
+int energyLoss::loadInputsFromFile(const std::string &filePath, std::map<std::string, std::string> &inputParamsFile)
+{
+	std::ifstream file_in(filePath);
+	if (!file_in.is_open()) {
+		std::cerr << "Error: unable to open configuration file. Aborting..." << std::endl;
+		return -1;
+	}
+	std::string line, key, sep, val;
+	while (std::getline(file_in, line))
+	{
+		std::stringstream ss(line);
+		ss >> key; ss >> sep; ss >> val;
+		inputParamsFile[key] = val;
+	}
+	file_in.close();
+	return 1;
 }
 
 energyLoss::~energyLoss() {}
