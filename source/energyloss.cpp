@@ -359,7 +359,7 @@ int energyLoss::loadLColl()
 
 int energyLoss::loadBinCollDensity(interpolationF<double> &binCollDensity)
 {
-	std::string path_in = "binarycolldensities/binarybolldensity_cent=" + m_centrality + ".dat";
+	std::string path_in = "binarycolldensities/binarycolldensity_cent=" + m_centrality + ".dat";
 	std::ifstream file_in(path_in, std::ios_base::in);
 	if (!file_in.is_open()) {
 		std::cerr << "Error: unable to open binary collision density file." << std::endl;
