@@ -23,7 +23,10 @@ All prerequisite files need to be textual tables. They can have a different numb
 
 initial pT distributions file should have 2 columns in format: pT | dsigma/d(pT^2);
 for heavy flavor, initial pT distributions can be obtained from http://www.lpthe.jussieu.fr/~cacciari/fonll/fonllform.html;  
-IMPORTANT: note that the default output of this web interface is dsigma/dpT, while ebeDREENA initial pT distribution input needs to be dsigma/d(pT^2), so these distributions need to be modified; to avoid modifying different parameters that are hard-coded, initial pT distribution for heavy flavour should be in the range of 1GeV to at least 200GeV and for light flavour from 1GeV to at least 450GeV; for most distributions pT step of 1GeV seems to be sufficient;  
+> [!CAUTION]
+> note that the default output of this web interface is dsigma/dpT, while ebeDREENA initial pT distribution input needs to be dsigma/d(pT^2), so these distributions need to be modified;  
+
+to avoid modifying different parameters that are hard-coded, initial pT distribution for heavy flavour should be in the range of 1GeV to at least 200GeV and for light flavour from 1GeV to at least 450GeV; for most distributions pT step of 1GeV seems to be sufficient;  
 initial pT distribution file path relative to the executable should be: ./pTDists/ptDists[sNN]/ptDist_[sNN]_[particleName].dat, where [sNN] is collision energy that can be 200GeV, 2760GeV, 5020GeV and [particleName] is the name of the particle that can be Bottom, Charm, Down, DownBar, Gluon, Strange, Up, UpBar; 
 
 #### c) binary collision density
@@ -62,7 +65,8 @@ this table is also a function of particle type, which figures in the file's name
 unlike previous files, DREENA-A calculates LTables; however, these tables need to be calculated only once and can be reused while calculating high-pT energy loss with different temperature evolution backgrounds;  
 LTables provided in this demo (in ./ltables/ directory) are for nf=3.0, charm quark and for xB=0.6;
 
-#### d) phiGausPts  
+#### d) phiGausPts
+
 in ./phiGaussPts/ directory are textual tables containing jet's direction angles and weights that correspond to Gaussian quadrature integration method in range [0, 2Pi];  
 jet's direction angles are sampled in these points, so that afterwards, when integrating final pT,phi distribution over phi, which is nedeed to obtain R_AA and v_2 there is no need for angle resampling;
 
@@ -72,18 +76,27 @@ There are two possible calculation options within DREENA-A framework: LTables ca
 
 #### a) LTables calculation
 
-   to perform basic LTables calculation use command: ./DREENAA LTables -pName=[particle_name] -xB=[xB]
+to see all parameters and their default values run:  
+```
+./DREENAA LTables -h
+```
+parameters for LTables calculations are:    
++ **sNN** parameter: case sensitive string with possible options: 200GeV, 2760GeV, 5020GeV, 5440GeV;  
++ **particleName** parameter: case sensitive string with possible options: Bottom, Charm, LQuarks, Gluon, where LQuarks stand for light quarks, since all light quarks (down, down-bar, strange, strange-bar, up and up-bar) use the same LTables;  
++ **xB** parameter: float that represents magnetic to electric mass ratio; based on lattice calculation: xB=0.6;  
 
-   particle_name parameter: case sensitive string with possible options: Bottom, Charm, LQuarks, Gluon, where LQuarks stand for light quarks, since
-                            all light quarks (down, down-bar, strange, strange-bar, up and up-bar) use the same LTables;
-   xB parameter:            float that represents magnetic to electric mass ratio; based on lattice calculation: 0.4<=xB<=0.6;
-
-   all parameters are optional; to see all parameters that can be changed and their default values (values that will be used if another value is not
-   provided) use: ./DREENAA LTables -h
-
-   since LTables calculation is time consuming, pregenerated LTables for charm quark with xB=0.4 is provided in ./LTables/ directory;
+additional parameters are number of points used for QuasiMonteCarlo integration LdndxMaxPoints and LCollMaxPoints;  
+to generate LTables provided in this demo, that are for 5020GeV collision energy, charm quakr and for xB value of 0.6, use:
+```
+./DREENAA LTables --sNN=5020GeV --pName=Charm --xB=0.6
+```
 
 #### b) energy loss calculation
+
+to see all parameters and their default values run:  
+```
+./DREENAA AverageEL -h
+```
 
    to perform basic energy loss calculation use command: ./DREENAA AverageEL -pName=[particle_name] -centrality=[centrality] -xB=[xB]
 
