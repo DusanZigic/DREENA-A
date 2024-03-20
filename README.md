@@ -62,7 +62,13 @@ this table is also a function of particle type, which figures in the file's name
 unlike previous files, DREENA-A calculates LTables; however, these tables need to be calculated only once and can be reused while calculating high-pT energy loss with different temperature evolution backgrounds;  
 LTables provided in this demo (in ./ltables/ directory) are for nf=3.0, charm quark and for xB=0.6;
 
+#### d) phiGausPts  
+in ./phiGaussPts/ directory are textual tables containing jet's direction angles and weights that correspond to Gaussian quadrature integration method in range [0, 2Pi];  
+jet's direction angles are sampled in these points, so that afterwards, when integrating final pT,phi distribution over phi, which is nedeed to obtain R_AA and v_2 there is no need for angle resampling;
+
 ## < 3 > run DREENA-A
+
+There are two possible calculation options within DREENA-A framework: LTables calculation and energy loss calculation. Since DREENA-A is parallelized using OpenMP, set OMP_NUM_THREADS environmental variable to desired value before running calculations.
 
 #### a) LTables calculation
 
