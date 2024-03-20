@@ -53,6 +53,15 @@ energyLoss::energyLoss(int argc, const char *argv[])
 			m_error = true;
 		}
 	}
+	std::vector<std::string> argumentsFile = {"collsys", "sNN", "pName", "centrality", "xB", "xGridN", "yGridN", "phiGridN", "TIMESTEP", "TCRIT"};
+	for (const auto &inputParam : inputParamsFile) {
+		if(std::find(argumentsFile.begin(), argumentsFile.end(), inputParam.first) == argumentsFile.end()) {
+			std::cerr << "Error: in configration file provided argument: '" << inputParam.first << "' is not an option." << std::endl;
+			std::cerr << "Valid parameters and default values are: \n";
+			std::cerr << "collsys = PbPb\nsNN = 5020GeV\npName = Charm\ncentrality = 30-40%\nxB = 0.6\nxGridN = 50\nyGridN = 50\nphiGridN = 25\nTIMESTEP = 0.1\nTCRIT = 0.155\n" << std::endl;
+			m_error = true;
+		}
+	}
 
 	//setting parameter values based on config file values and overwriting with command line values:
 	//
