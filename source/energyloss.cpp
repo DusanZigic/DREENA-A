@@ -35,7 +35,7 @@ energyLoss::energyLoss(int argc, const char *argv[])
 		inputParams[key] = val;
 	}
 	
-	std::vector<std::string> arguments = {"collsys", "sNN", "pName", "centrality", "xB", "xGridN", "yGridN", "phiGridN", "TIMESTEP", "TCRIT", "config"};
+	std::vector<std::string> arguments = {"collsys", "sNN", "pName", "centrality", "xB", "xGridN", "yGridN", "phiGridN", "TIMESTEP", "TCRIT", "config", "h"};
 	for (const auto &inputParam : inputParams) {
 		if(std::find(arguments.begin(), arguments.end(), inputParam.first) == arguments.end()) {
 			std::cerr << "Error: provide argument flag: " << inputParam.first << " is not an option." << std::endl;
