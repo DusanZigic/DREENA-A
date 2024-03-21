@@ -82,14 +82,31 @@ to see all parameters and their default values run:
 ```
 parameters for LTables calculations are:    
 + **sNN** parameter: case sensitive string with possible options: 200GeV, 2760GeV, 5020GeV, 5440GeV;  
-+ **particleName** parameter: case sensitive string with possible options: Bottom, Charm, LQuarks, Gluon, where LQuarks stand for light quarks, since all light quarks (down, down-bar, strange, strange-bar, up and up-bar) use the same LTables;  
-+ **xB** parameter: float that represents magnetic to electric mass ratio; based on lattice calculation: xB=0.6;  
+*default value: PbPb*
 
-additional parameters are number of points used for QuasiMonteCarlo integration LdndxMaxPoints and LCollMaxPoints;  
-to generate LTables provided in this demo, that are for 5020GeV collision energy, charm quakr and for xB value of 0.6, use:
++ **pName** parameter: case sensitive string with possible options: Bottom, Charm, LQuarks, Gluon, where LQuarks stand for light quarks, since all light quarks (down, down-bar, strange, strange-bar, up and up-bar) use the same LTables;  
+*default value: Charm*
+
++ **xB** parameter: float that represents magnetic to electric mass ratio; based on lattice calculation: xB=0.6;  
+*default value: 0.6*
+
+additional parameters are number of points used for QuasiMonteCarlo integration LdndxMaxPoints and LCollMaxPoints, with default values 500000 and 10000, respectively;  
+
+to generate LTables provided in this demo, that are for 5020GeV collision energy, charm quark and for xB value of 0.6, use:
+
 ```
 ./DREENAA LTables --sNN=5020GeV --pName=Charm --xB=0.6
+
 ```
+
+or just:
+
+```
+./DREENAA LTables
+
+```
+
+since these are all default parameter values;
 
 #### b) energy loss calculation
 
@@ -97,32 +114,50 @@ to see all parameters and their default values run:
 ```
 ./DREENAA AverageEL -h
 ```
+parameters for energy loss calculations are:  
++ **collsys** parameter: case sensitive string with possible options: AuAu, PbPb, XeXe,...  
+*default value: PbPb*
 
-   to perform basic energy loss calculation use command: ./DREENAA AverageEL -pName=[particle_name] -centrality=[centrality] -xB=[xB]
++ **sNN** parameter: case sensitive string with possible options: 200GeV, 2760GeV, 5020GeV, 5440GeV;  
+*default value: 5020GeV*
 
-   particle_name parameter: case sensitive string with possible options: Bottom, Charm, Down, DownBar, Gluon, Strange, Up, UpBar, or LQuarks, where
-                            LQuarks stands for light quarks; the calculation for all light quarks is performed at the same time (preferable
-                            if all light flavor particles are needed for fragmentation functions);
-                            pregenerated LTables need to match particle name parameter to run energy loss calculation;
-   centrality:              string in format 'xx-xx%' (ie 0-5%, 10-20%,...) that represents centrality class parameter
-   xB parameter:            float that represents magnetic to electric mass ratio; based on lattice calculation: 0.4<=xB<=0.6;
-                            pregenerated LTables need to match xB parameter to run energy loss calculation;
-   
-   additional parameters are:
-   -xGriN, yGridN: number of x and y points on the equidistant grid in transverse plane that will be used as initial position points for jets (default values:
-                   -xGridN=40 -yGridN=40);
-   -phiGridN:      number of sampled angles between jet's trajectory and the x-axis in the transverse plane (default value: -phiGridN=50)
-   -pTinit_path:   absolute path or path relative to executable of initial pT distribution; if omitted, the default path is used: ./pTinitDists/pTinitDist_[particle_name].dat
-   -temp_path:     absolute path or path relative to executable of temperature evolution file; if omitted, the default path is used: ./TProfiles/TProfile_cent=[centrality].dat
-   -bcd_path:      absolute path or path relative to executable of binary collision density file; if omitted, the default path is used: ./BinaryCollDensities/BinaryCollDensity_cent=[centrality].dat
-   -TIMESTEP:      timestep along jet's trajectory (default value: 0.1; unit: fm)
-   -TCRIT:         critical temperature (default value: 0.155; unit: GeV)
++ **pName** parameter: case sensitive string with possible options: Bottom, Charm, Gluon, Down, DownBar, Strange, Up, UpBar, LQuarks;  
+the calculation can be done for each parton individualy, however there is an option to calculate all light quarks at the same time using modified algorithm since the only thing differentiating light quarks is initial pT distribution; this leads to 4x speed-up of the calculation time compared to calculating each light quark individually;  
+*default value: Charm*
 
-   all parameters are optional; to see all parameters that can be changed and their default values (values that will be used if another value is not
-   provided) use: ./DREENAA AverageEL -h
++ **centrality** parameter: string in format 'xx-xx%' (ie 0-5%, 10-20%,...);  
+*default value: 30-40%*
 
-   code is parallelized using OpenMP, which means the number of cores used by the program can be controlled with the OMP_NUM_THREADS environmental variable; for example,
-   to run energy loss on 4 cores for charm and for 30-40% centrality, command would be: export OMP_NUM_THREADS=4; ./DREENAA AverageEL -pName=Charm -centrality=30-40%;
++ **xB** parameter: float representing magnetic to electric mass ratio; based on latest lattice calculation: xB=0.6;  
+*default value: 0.6*
+
++ **xGriN** and **yGridN** parameters: positive integers representing number of x and y points on the equidistant grid in transverse plane that will be used as initial position points for jets;  
+*default values: 50, 50*
+
++ **phiGridN** parameter: positive integer representing number of sampled angles between jet's trajectory and the x-axis in the transverse plane;  
+*default value: 25*
+
++ **TIMESTEP** parameter: positive float representing timestep along jet's trajectory in fm;  
+*default value: 0.1*
+
++ **TCRIT** parameter: positive float representing critical temperature in GeV, i.e. temperature value for which jet's energy loss stops;  
+*default value: 0.155*
+
+to generate results provided in this demo (*./results/resultsCharm/Charm_PbPb_sNN=5020GeV_cent=30-40%_xB=0.6_dist.dat*) provided in this demo, that are for Pb+Pb 5020GeV collisions, charm quarks, 30-40% centrality class and for xB value of 0.6, use:
+
+```
+./DREENAA AverageEL collsys=PbPb --sNN=5020GeV --pName=Charm --centrality=30-40% --xB=0.6 --xGridN=50 --yGridN=50 --phiGridN=25
+
+```
+
+or just:
+
+```
+./DREENAA AverageEL
+
+```
+
+since these are all default parameter values;
 
 
 ## < 4 > output
