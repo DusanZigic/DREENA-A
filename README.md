@@ -164,25 +164,25 @@ since these are all default parameter values;
 
 #### a) LTables output
 
-output of LTables run is ./ltables/ directory; for single run, there are three output files - two for radiative and one for collisional part of energy loss;  
-these tables are determined by collision energy throught effective number of flavours, nf, particle type and value of xB;  
-these tables will later be used for energy loss calculations on hydro background and they can be reused for different hydro backgrounds;
-as an example, tables for 5020GeV collisions, charm quark and xB value of 0.4 are given;
+Output of LTables run is in ./ltables/ directory; for single run, there are three output files - two for radiative and one for collisional part of energy loss.  
+
+These tables are determined by collision energy throught effective number of flavours, nf, particle type and value of xB.  
+
+These tables will later be used for energy loss calculations on hydro background and they can be reused for different hydro backgrounds.
+
+As an example, tables for 5020GeV collisions, charm quark and xB value of 0.4 are given.
 
 #### b) energy loss output
 
-   energy loss run outputs two files: one containing RAA(pT, phi) and the other one containing RAA(pT) and v_2(pT), where RAA(pT) and v_2(pT) are calculated
-   from RAA(pT, phi);
-   files are contained in ./CResults/CResults_[particle_name] directory and file name format is: [particle_name]_5TeV_cent=[centrality]_xB=[xB]_dist.dat
-   for file that contains RAA(pT, phi) and [particle_name]_5TeV_cent=[centrality]_xB=[xB]_obs.dat for file that contains RAA(pT) and v_2(pT);
-   both files have headers that contain additional data such as: collision system, collision energy, particle type, centrality, xB value, average path lengths
-   and temperatures both contaning three values: angular-averaged, in-plane and out-of-plane, as well as number of sampled angles and initial (x,y) points and
-   column description of the data that follows;
-   both files have three columns of data after header; file that containes RAA(pT, phi) (*_dist.dat file) has: pT | phi | RAA(pT,phi), while the file that
-   contains RAA(pT) and v_2(pT) (*_obs.dat file) has: pT | RAA(pT) | v_2(pT);
-   as an example dist (RAA(pT,phi)), and obs (RAA(pT) and v2(pT)) files for charm quark are given; energy loss is calculated using initial momentum distributions
-   obtained using web interface mentioned above and on hydro background that is provided in this demo;
+Output of energy loss run is in *./results/* directory;  
 
+These are R_AA(pT,phi) distributions that are later used to calculate R_AA and v_2; for more details on how R_AA(pT) and v_2(pT) are calculated see equations (16) and (17) in [arxiv:2110.01544](https://inspirehep.net/literature/2606181).  
+
+These files also have headers, that contain various informations about the energy loss calculation such as number of angles and points in x-y plane used as jet's initial positions, average jet path-length and temperature jets experience along the trajectory,...  
+
+For file name pattern see file provided in this repository.
+
+As an example file contaning RAA(pT,phi) for charm quark at 30-40% centrality class for Pb+Pb 5020GeV collisions and xB value of 0.6 is provided. This RAA(pT,phi) distribution is obtained calculating energy loss on hydro background provided in this demo (./evols/tempevol_cent=30-40%.dat), while the jet's intial positions are generated based on probability also provided in this demo (./binarycolldensities/binarycolldensity_cent=30-40%.dat)
 
 ## < 5 > disclaimer
 
