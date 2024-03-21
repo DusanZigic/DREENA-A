@@ -21,22 +21,28 @@ All prerequisite files need to be textual tables. They can have a different numb
 
 #### a) initial pT distributions
 
-initial pT distributions file should have 2 columns in format: pT | dsigma/d(pT^2);
-for heavy flavor, initial pT distributions can be obtained from http://www.lpthe.jussieu.fr/~cacciari/fonll/fonllform.html;  
+initial pT distributions file should have 2 columns in format:
+
+pT | dsigma/d(pT^2) |
+--- | --- |
+... | ... |
+
+for heavy flavor, initial pT distributions can be obtained from this [web site](http://www.lpthe.jussieu.fr/~cacciari/fonll/fonllform.html);  
 > [!CAUTION]
-> note that the default output of this web interface is dsigma/dpT, while ebeDREENA initial pT distribution input needs to be dsigma/d(pT^2), so these distributions need to be modified;  
+> note that the default output of this web interface is dsigma/dpT, while ebeDREENA initial pT distribution input needs to be dsigma/d(pT^2), so these distributions need to be modified;
 
 to avoid modifying different parameters that are hard-coded, initial pT distribution for heavy flavour should be in the range of 1GeV to at least 200GeV and for light flavour from 1GeV to at least 450GeV; for most distributions pT step of 1GeV seems to be sufficient;  
-initial pT distribution file path relative to the executable should be: ./pTDists/ptDists[sNN]/ptDist_[sNN]_[particleName].dat, where [sNN] is collision energy that can be 200GeV, 2760GeV, 5020GeV and [particleName] is the name of the particle that can be Bottom, Charm, Down, DownBar, Gluon, Strange, Up, UpBar; 
 
-#### c) binary collision density
+initial pT distribution file path relative to the executable should be: `./pTDists/ptDists[sNN]/ptDist_[sNN]_[particleName].dat`, where *sNN* is collision energy that can be 200GeV, 2760GeV, 5020GeV and *particleName* is the name of the particle that can be Bottom, Charm, Down, DownBar, Gluon, Strange, Up, UpBar;
+
+#### b) binary collision density
 
 binary collision density file contains jet creation probability in transverse plane as a function of x and y; x and y need to form ordered grid with run order y > x, while probability is the 3rd column in the table;  
 the binary collision density can be given only in the 1st quadrant of the transverse plane (x>=0, y>=0) if initial conditions have this symmetry;  
 binary collision density needs to be consistent with initial conditions used to generate temperature evolution;  
 binary collision density provided in this demo (./binarycolldensities/binarycolldensity_cent=30-40%.dat) is generated using optical Glauber model (see [arxiv:2110.01544](https://inspirehep.net/literature/2606181) for more details) and it corresponds to provided temperature evolution;
 
-#### b) temperature evolution
+#### c) temperature evolution
 
 temperature evolution file contains temperature as a function of proper time, tau, and x and y spatial coordinates in the transverse plane in that order; tau, x and y need to form an ordered grid with run order y > x > tau;  
 temperature evolution file can contain an additional column with energy density evolution; if the file contains temperature and energy density evolution, the order of these two columns can be arbitrary (energy density can be 4th column and temperature 5th, or vice versa);  
@@ -61,11 +67,21 @@ p | temp | LColl
 --- | --- | --- |
 ... | ... | ... |
 
-this table is also a function of particle type, which figures in the file's name;  
-unlike previous files, DREENA-A calculates LTables; however, these tables need to be calculated only once and can be reused while calculating high-pT energy loss with different temperature evolution backgrounds;  
-LTables provided in this demo (in ./ltables/ directory) are for nf=3.0, charm quark and for xB=0.6;
+this table is also a function of particle mass (particle name is in file name) and effective number of flavours, nf;
 
-#### d) phiGausPts
+LTables files path relative to the executable should be:
+
++ `./ltables/lnorm_nf=[nf]_[particleName]_xB=[xB].dat`,
++ `./ltables/ldndx_nf=[nf]_[particleName]_xB=[xB].dat` and
++ `./ltables/lcoll_nf=[nf]_[particleName].dat`,
+
+where *nf* is the effective number of flavours that can be 2.5 for 200GeV or 3.0 for LHC energy collisions, *particleName* is the name of the particle that can be Bottom, Charm, LQuarks or Gluon (all light quarks are taken to have same mass, so their LTables are the same), and *xB* is the chromo-magnetic to electric mass ratio;
+
+unlike previous files, DREENA-A calculates LTables; however, these tables need to be calculated only once and can be reused while calculating high-pT energy loss with different temperature evolution backgrounds;
+
+within this repository there is an example of LTables files for Charm quark, nf=3.0 and xB=0.6;
+
+#### e) phiGausPts
 
 in ./phiGaussPts/ directory are textual tables containing jet's direction angles and weights that correspond to Gaussian quadrature integration method in range [0, 2Pi];  
 jet's direction angles are sampled in these points, so that afterwards, when integrating final pT,phi distribution over phi, which is nedeed to obtain R_AA and v_2 there is no need for angle resampling;
