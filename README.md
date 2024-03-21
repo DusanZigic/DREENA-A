@@ -112,14 +112,12 @@ to generate LTables provided in this demo, that are for 5020GeV collision energy
 
 ```
 ./DREENAA LTables --sNN=5020GeV --pName=Charm --xB=0.6
-
 ```
 
 or just:
 
 ```
 ./DREENAA LTables
-
 ```
 
 since these are all default parameter values;
@@ -163,14 +161,12 @@ to generate results provided in this demo (*./results/resultsCharm/Charm_PbPb_sN
 
 ```
 ./DREENAA AverageEL collsys=PbPb --sNN=5020GeV --pName=Charm --centrality=30-40% --xB=0.6 --xGridN=50 --yGridN=50 --phiGridN=25
-
 ```
 
 or just:
 
 ```
 ./DREENAA AverageEL
-
 ```
 
 since these are all default parameter values;
@@ -190,7 +186,7 @@ As an example, tables for 5020GeV collisions, charm quark and xB value of 0.4 ar
 
 #### b) energy loss output
 
-Output of energy loss run is in *./results/* directory;  
+Output of energy loss run is in `./results/` directory;  
 
 These are R_AA(pT,phi) distributions that are later used to calculate R_AA and v_2; for more details on how R_AA(pT) and v_2(pT) are calculated see equations (16) and (17) in [arxiv:2110.01544](https://inspirehep.net/literature/2606181).  
 
@@ -198,7 +194,7 @@ These files also have headers, that contain various informations about the energ
 
 For file name pattern see file provided in this repository.
 
-As an example file contaning RAA(pT,phi) for charm quark at 30-40% centrality class for Pb+Pb 5020GeV collisions and xB value of 0.6 is provided. This RAA(pT,phi) distribution is obtained calculating energy loss on hydro background provided in this demo (./evols/tempevol_cent=30-40%.dat), while the jet's intial positions are generated based on probability also provided in this demo (./binarycolldensities/binarycolldensity_cent=30-40%.dat)
+As an example file contaning RAA(pT,phi) for charm quark at 30-40% centrality class for Pb+Pb 5020GeV collisions and xB value of 0.6 is provided. This RAA(pT,phi) distribution is obtained calculating energy loss on hydro background provided in this demo (`./evols/tempevol_cent=30-40%.dat`), while the jet's intial positions are generated based on probability also provided in this demo (`./binarycolldensities/binarycolldensity_cent=30-40%.dat`)
 
 ## < 5 > disclaimer
 
