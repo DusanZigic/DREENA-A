@@ -164,10 +164,10 @@ since these are all default parameter values;
 
 #### a) LTables output
 
-   output of LTables run is ./LTables directory; for single run, there are three output files - two for radiative and one for collisional; these tables are
-   determined by particle type and value of xB;
-   these tables will later be used for energy loss calculations on hydro background and they can be reused for different hydro bacgrounds;
-   as an example, tables for charm quark are given for xB value of 0.4;
+output of LTables run is ./ltables/ directory; for single run, there are three output files - two for radiative and one for collisional part of energy loss;  
+these tables are determined by collision energy throught effective number of flavours, nf, particle type and value of xB;  
+these tables will later be used for energy loss calculations on hydro background and they can be reused for different hydro backgrounds;
+as an example, tables for 5020GeV collisions, charm quark and xB value of 0.4 are given;
 
 #### b) energy loss output
 
