@@ -35,6 +35,8 @@ to avoid modifying different parameters that are hard-coded, initial pT distribu
 
 initial pT distribution file path relative to the executable should be: `./pTDists/ptDists[sNN]/ptDist_[sNN]_[particleName].dat`, where *sNN* is collision energy that can be 200GeV, 2760GeV, 5020GeV and *particleName* is the name of the particle that can be Bottom, Charm, Down, DownBar, Gluon, Strange, Up, UpBar;
 
+a script that can automatically download heavy flavour initial pT distribution with appropriate ranges and paths can be downloaded from [here](https://github.com/DusanZigic/heavyQuarkProduction);  
+
 #### b) binary collision density
 
 binary collision density file contains jet creation probability in transverse plane as a function of x and y; x and y need to form ordered grid with run order y > x, while probability is the 3rd column in the table;  
